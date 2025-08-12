@@ -42,3 +42,10 @@ def cars(request):
 
 
 
+def register(request):
+    return render(request, "pages/register.html")
+
+
+
+def login(request):
+    return render(request, "pages/login.html")
