@@ -1,4 +1,4 @@
-from ..pages.models import Team
+from pages.models import Team
 
 
 def create_team(team):

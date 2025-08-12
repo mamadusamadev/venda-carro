@@ -8,11 +8,12 @@
     <div id="carouselExampleIndicators" class="carousel slide" data-ride="carousel">
         <div class="carousel-inner banner-slider-inner text-center">
             <div class="carousel-item banner-max-height active item-bg">
+                 
                 <img class="d-block w-100 h-100" src="{% static 'img/car-1.jpg' %}" alt="banner">
                 <div class="carousel-content container banner-info-2 bi-2 text-left">
                     <h3>Wow Factor Standard</h3>
-                    <h5>Allow us to guide you through the innovative stress<br>
-                        free approach in finding your dream car.</h5>
+                    <h5>Permita -nos guiá -lo através da abordagem inovadora sem estresse<br>
+                        para encontrar o carro dos seus sonhos.</h5>
                     <a href="services.html" class="btn btn-lg btn-theme">Read more</a>
                 </div>
             </div>
@@ -898,96 +899,27 @@
         <!-- Slick slider area start -->
         <div class="slick-slider-area clearfix">
             <div class="row slick-carousel" data-slick='{"slidesToShow": 4, "responsive":[{"breakpoint": 1024,"settings":{"slidesToShow": 2}}, {"breakpoint": 768,"settings":{"slidesToShow": 1}}]}'>
+                {% for member in teams %}
                 <div class="slick-slide-item">
                     <div class="team-1">
+
                         <div class="photo">
                             <a href="#">
-                                <img src="{% static 'img/avatar/avatar-12.jpg' %}" alt="team-1" class="img-fluid">
+                                <img src="{{ member.photo.url }}" alt="team-1" class="img-fluid">
                             </a>
                             <div class="social-list clearfix">
-                                <a href="#" class="facebook-bg"><i class="fa fa-facebook"></i></a>
-                                <a href="#" class="twitter-bg"><i class="fa fa-twitter"></i></a>
-                                <a href="#" class="google-bg"><i class="fa fa-google"></i></a>
+                                <a href="{{ member.facebock_link }}" class="facebook-bg"><i class="fa fa-facebook"></i></a>
+                                <a href="{{ member.twiter_link }}" class="twitter-bg"><i class="fa fa-twitter"></i></a>
+                                <a href="{{ member.google_plus_link }}" class="google-bg"><i class="fa fa-google"></i></a>
                             </div>
                         </div>
                         <div class="details">
-                            <h4><a href="team-detail.html">Brandon Miller</a></h4>
-                            <h5>Manager</h5>
+                            <h4><a href="team-detail.html">{{member.first_name}} {{member.last_name}}</a></h4>
+                            <h5>{{member.designation}}</h5>
                         </div>
                     </div>
                 </div>
-                <div class="slick-slide-item">
-                    <div class="team-1">
-                        <div class="photo">
-                            <a href="#">
-                                <img src="{% static 'img/avatar/avatar-9.jpg' %}" alt="team-1" class="img-fluid">
-                            </a>
-                            <div class="social-list clearfix">
-                                <a href="#" class="facebook-bg"><i class="fa fa-facebook"></i></a>
-                                <a href="#" class="twitter-bg"><i class="fa fa-twitter"></i></a>
-                                <a href="#" class="google-bg"><i class="fa fa-google"></i></a>
-                            </div>
-                        </div>
-                        <div class="details">
-                            <h4><a href="team-detail.html">Michelle Nelson</a></h4>
-                            <h5>Support Manager</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="slick-slide-item">
-                    <div class="team-1">
-                        <div class="photo">
-                            <a href="#">
-                                <img src="{% static 'img/avatar/avatar-11.jpg' %}" alt="team-1" class="img-fluid">
-                            </a>
-                            <div class="social-list clearfix">
-                                <a href="#" class="facebook-bg"><i class="fa fa-facebook"></i></a>
-                                <a href="#" class="twitter-bg"><i class="fa fa-twitter"></i></a>
-                                <a href="#" class="google-bg"><i class="fa fa-google"></i></a>
-                            </div>
-                        </div>
-                        <div class="details">
-                            <h4><a href="team-detail.html">Stone Carolyn</a></h4>
-                            <h5>Creative Director</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="slick-slide-item">
-                    <div class="team-1">
-                        <div class="photo">
-                            <a href="#">
-                                <img src="{% static 'img/avatar/avatar-10.jpg' %}" alt="team-1" class="img-fluid">
-                            </a>
-                            <div class="social-list clearfix">
-                                <a href="#" class="facebook-bg"><i class="fa fa-facebook"></i></a>
-                                <a href="#" class="twitter-bg"><i class="fa fa-twitter"></i></a>
-                                <a href="#" class="google-bg"><i class="fa fa-google"></i></a>
-                            </div>
-                        </div>
-                        <div class="details">
-                            <h4><a href="team-detail.html">Martin Smith</a></h4>
-                            <h5>Web Developer</h5>
-                        </div>
-                    </div>
-                </div>
-                <div class="slick-slide-item">
-                    <div class="team-1">
-                        <div class="photo">
-                            <a href="#">
-                                <img src="{% static 'img/avatar/avatar-11.jpg' %}" alt="team-1" class="img-fluid">
-                            </a>
-                            <div class="social-list clearfix">
-                                <a href="#" class="facebook-bg"><i class="fa fa-facebook"></i></a>
-                                <a href="#" class="twitter-bg"><i class="fa fa-twitter"></i></a>
-                                <a href="#" class="google-bg"><i class="fa fa-google"></i></a>
-                            </div>
-                        </div>
-                        <div class="details">
-                            <h4><a href="team-detail.html">Stone Carolyn</a></h4>
-                            <h5>Creative Director</h5>
-                        </div>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -1004,7 +936,7 @@
                 </div>
             </div>
             <div class="col-lg-3 col-md-4 col-sm-12">
-                <a href="contact.html" class="btn btn-md">Get in Touch</a>
+                <a href="{% url 'contacts' %}" class="btn btn-md">Get in Touch</a>
             </div>
         </div>
     </div>
