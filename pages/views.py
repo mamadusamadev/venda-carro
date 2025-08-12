@@ -24,3 +24,5 @@ def contacts(request):
 
 def cars(request):
     return render(request, "pages/cars.html")
+
+
