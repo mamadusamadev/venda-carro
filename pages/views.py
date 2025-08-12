@@ -41,6 +41,10 @@ def cars(request):
     return render(request, "pages/cars.html")
 
 
+def car_detail(request):
+    return render(request, "pages/car-details.html")
+
+
 
 def register(request):
     return render(request, "pages/register.html")
