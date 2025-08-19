@@ -48,6 +48,55 @@ def home(request):
     return render(request, 'pages/home.html', context)
 
 
+def car_detail(request, car_id):
+    """
+    Página de detalhes do carro
+    """
+    from cars.models import Car
+    from django.shortcuts import get_object_or_404
+    from django.http import JsonResponse
+    
+    # Buscar o carro com todas as relações necessárias
+    car = get_object_or_404(
+        Car.objects.select_related('brand', 'car_model', 'seller')
+                   .prefetch_related('photos', 'reviews', 'reviews__buyer'),
+        id=car_id
+    )
+    
+    # Incrementar visualizações
+    car.views += 1
+    car.save(update_fields=['views'])
+    
+    # Carros similares (mesma marca, excluindo o atual)
+    similar_cars = Car.objects.filter(
+        brand=car.brand,
+        status='active'
+    ).exclude(id=car.id).select_related('brand', 'car_model', 'seller').prefetch_related('photos')[:4]
+    
+    # Verificar se é favorito (se utilizador autenticado)
+    is_favorite = False
+    if request.user.is_authenticated:
+        from cars.models import Favorite
+        is_favorite = Favorite.objects.filter(user=request.user, car=car).exists()
+    
+    # Calcular média de avaliações
+    reviews = car.reviews.all()
+    avg_rating = 0
+    if reviews:
+        total_rating = sum(review.rating for review in reviews)
+        avg_rating = round(total_rating / len(reviews), 1)
+    
+    context = {
+        'car': car,
+        'similar_cars': similar_cars,
+        'is_favorite': is_favorite,
+        'reviews': reviews,
+        'avg_rating': avg_rating,
+        'reviews_count': len(reviews),
+    }
+    
+    return render(request, 'pages/car-details.html', context)
+
 
 def about(request):
     teams = team_service.list_team()
@@ -149,9 +198,6 @@ def cars(request):
     
     return render(request, "pages/cars.html", context)
 
-
-def car_detail(request):
-    return render(request, "pages/car-details.html")
 
 
 

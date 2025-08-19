@@ -63,7 +63,7 @@
                         <div class="col-lg-6 col-md-6 mb-4">
                             <div class="car-box-3">
                                 <div class="car-thumbnail">
-                                    <a href="{% url 'detail' %}" class="car-img">
+                                    <a href="{% url 'car_detail' car.id %}" class="car-img">
                                         {% if car.status == 'reserved' %}
                                             <div class="tag-reserved">Reservado</div>
                                         {% elif car.status == 'sold' %}
@@ -109,10 +109,10 @@
                                 
                                 <div class="detail">
                                     <h1 class="title">
-                                        <a href="{% url 'detail' %}">{{ car.title|truncatechars:40 }}</a>
+                                        <a href="{% url 'car_detail' car.id %}">{{ car.title|truncatechars:40 }}</a>
                                     </h1>
                                     <div class="location">
-                                        <a href="{% url 'detail' %}">
+                                        <a href="{% url 'car_detail' car.id %}">
                                             <i class="flaticon-pin"></i>{{ car.city }}, {{ car.district }}
                                         </a>
                                     </div>
