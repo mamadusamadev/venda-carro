@@ -23,4 +23,7 @@ urlpatterns = [
     
     # Estatísticas
     path('estatisticas/', views.statistics, name='statistics'),
+    
+    # Alterar status do carro
+    path('carros/<uuid:car_id>/alterar-status/', views.change_car_status, name='change_car_status'),
 ] 

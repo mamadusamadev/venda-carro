@@ -18,6 +18,35 @@
                 </div>
                 <div>
                     {% if car.seller == request.user %}
+                        <div class="btn-group me-2" role="group">
+                            <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-tag me-1"></i>Status: {{ car.get_status_display }}
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% if car.status != 'active' %}
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="changeStatus('active')">
+                                            <i class="fas fa-check-circle text-success me-2"></i>Ativar
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if car.status != 'reserved' %}
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="changeStatus('reserved')">
+                                            <i class="fas fa-clock text-warning me-2"></i>Marcar como Reservado
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if car.status != 'sold' %}
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="changeStatus('sold')">
+                                            <i class="fas fa-handshake text-info me-2"></i>Marcar como Vendido
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                        
                         <a href="{% url 'dashboard:car_edit' car.id %}" class="btn btn-warning btn-sm">
                             <i class="fas fa-edit me-1"></i>Editar
                         </a>
@@ -483,6 +512,40 @@ function shareAd() {
 function deleteCar() {
     if (confirm('Tem a certeza que deseja eliminar este carro? Esta ação não pode ser desfeita.')) {
         window.location.href = "{% url 'dashboard:car_delete' car.id %}";
+    }
+}
+
+function changeStatus(newStatus) {
+    const statusMessages = {
+        'active': 'ativar',
+        'reserved': 'marcar como reservado',
+        'sold': 'marcar como vendido'
+    };
+    
+    const message = statusMessages[newStatus];
+    
+    if (confirm(`Tem a certeza que deseja ${message} este carro?`)) {
+        // Criar formulário e submeter
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = "{% url 'dashboard:change_car_status' car.id %}";
+        
+        // CSRF Token
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        form.appendChild(csrfToken);
+        
+        // Status
+        const statusInput = document.createElement('input');
+        statusInput.type = 'hidden';
+        statusInput.name = 'status';
+        statusInput.value = newStatus;
+        form.appendChild(statusInput);
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 }
 </script>

@@ -206,8 +206,14 @@
                                         {% if car.status == 'active' %}
                                         <li>
                                             <a class="dropdown-item" href="#" 
+                                               onclick="changeStatus('{{ car.id }}', 'reserved')">
+                                                <i class="fas fa-clock me-2 text-warning"></i>Marcar como Reservado
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
                                                onclick="changeStatus('{{ car.id }}', 'sold')">
-                                                <i class="fas fa-handshake me-2"></i>Marcar como Vendido
+                                                <i class="fas fa-handshake me-2 text-info"></i>Marcar como Vendido
                                             </a>
                                         </li>
                                         {% endif %}

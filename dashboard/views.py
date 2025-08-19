@@ -269,7 +269,7 @@ def car_add(request):
                 abs_brakes=request.POST.get('abs_brakes') == 'on',
                 airbags=request.POST.get('airbags') == 'on',
                 
-                status='pending'
+                status='active'  # Carros ficam ativos imediatamente
             )
             
             # Processar imagem se foi enviada
@@ -510,3 +510,33 @@ def statistics(request):
     }
     
     return render(request, 'dashboard/statistics.html', context)
+
+
+@login_required
+def change_car_status(request, car_id):
+    """
+    Alterar status do carro (apenas vendedores podem alterar seus próprios carros)
+    """
+    if request.method == 'POST':
+        car = get_object_or_404(Car, id=car_id, seller=request.user)
+        new_status = request.POST.get('status')
+        
+        # Apenas permitir mudanças para sold e reserved (e active para reativar)
+        allowed_statuses = ['active', 'sold', 'reserved']
+        
+        if new_status in allowed_statuses:
+            old_status = car.get_status_display()
+            car.status = new_status
+            car.save()
+            
+            status_messages = {
+                'active': 'Carro reativado com sucesso!',
+                'sold': 'Carro marcado como vendido!',
+                'reserved': 'Carro marcado como reservado!'
+            }
+            
+            messages.success(request, status_messages.get(new_status, 'Status alterado com sucesso!'))
+        else:
+            messages.error(request, 'Status não permitido.')
+    
+    return redirect('dashboard:car_detail', car_id=car_id)
