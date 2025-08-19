@@ -1,159 +1,122 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.urls import reverse
 from django.http import JsonResponse
-from accounts.models import User, SellerProfile, BuyerProfile
-import json
+from django.views.decorators.csrf import csrf_exempt
+
+from forms.auth_forms import LoginForm, RegisterForm
+from service.auth_service import AuthService
+from entities.user_entity import AuthCredentials, RegisterData
+
 
 def login_view(request):
-    """
-    View para login de utilizadores
-    """
+    """View para login de utilizadores com email"""
     if request.user.is_authenticated:
         return redirect('dashboard:home')
     
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        
-        if username and password:
-            user = authenticate(request, username=username, password=password)
-            
-            if user is not None:
-                login(request, user)
-                messages.success(request, f'Bem-vindo, {user.get_full_name() or user.username}!')
-                
-                # Redirecionar para a página solicitada ou dashboard
-                next_url = request.GET.get('next', reverse('dashboard:home'))
-                return redirect(next_url)
-            else:
-                messages.error(request, 'Nome de utilizador ou palavra-passe incorretos.')
-        else:
-            messages.error(request, 'Por favor, preencha todos os campos.')
+    form = LoginForm()
     
-    return render(request, 'authentication/login.html')
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        
+        if form.is_valid():
+            credentials = AuthCredentials(
+                email=form.cleaned_data['email'],
+                password=form.cleaned_data['password']
+            )
+            
+            success, user, message = AuthService.authenticate_user(credentials)
+            
+            if success and user:
+                # Faz login do utilizador
+                if AuthService.login_user(request, user):
+                    messages.success(request, f'Bem-vindo, {user.first_name or user.username}!')
+                    
+                    # Redireciona para onde o utilizador queria ir ou dashboard
+                    next_url = request.GET.get('next', 'dashboard:home')
+                    return redirect(next_url)
+                else:
+                    messages.error(request, 'Erro ao fazer login. Tente novamente.')
+            else:
+                messages.error(request, message)
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
+    
+    context = {
+        'form': form,
+        'title': 'Entrar na Conta'
+    }
+    
+    return render(request, 'authentication/login.html', context)
 
 
 def register_view(request):
-    """
-    View para registo de novos utilizadores
-    """
+    """View para registo de utilizadores"""
     if request.user.is_authenticated:
         return redirect('dashboard:home')
     
+    form = RegisterForm()
+    
     if request.method == 'POST':
-        # Dados básicos
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
-        first_name = request.POST.get('first_name')
-        last_name = request.POST.get('last_name')
-        user_type = request.POST.get('user_type', 'buyer')
-        phone = request.POST.get('phone')
-        city = request.POST.get('city')
-        district = request.POST.get('district')
+        form = RegisterForm(request.POST)
         
-        # Validações básicas
-        if not all([username, email, password1, password2, first_name, last_name]):
-            messages.error(request, 'Por favor, preencha todos os campos obrigatórios.')
-            return render(request, 'authentication/register.html')
-        
-        if password1 != password2:
-            messages.error(request, 'As palavras-passe não coincidem.')
-            return render(request, 'authentication/register.html')
-        
-        if len(password1) < 6:
-            messages.error(request, 'A palavra-passe deve ter pelo menos 6 caracteres.')
-            return render(request, 'authentication/register.html')
-        
-        if User.objects.filter(username=username).exists():
-            messages.error(request, 'Este nome de utilizador já existe.')
-            return render(request, 'authentication/register.html')
-        
-        if User.objects.filter(email=email).exists():
-            messages.error(request, 'Este email já está registado.')
-            return render(request, 'authentication/register.html')
-        
-        try:
-            # Criar utilizador
-            user = User.objects.create_user(
-                username=username,
-                email=email,
-                password=password1,
-                first_name=first_name,
-                last_name=last_name,
-                user_type=user_type,
-                phone=phone,
-                city=city,
-                district=district
+        if form.is_valid():
+            register_data = RegisterData(
+                email=form.cleaned_data['email'],
+                username=form.cleaned_data['username'],
+                password=form.cleaned_data['password'],
+                password_confirm=form.cleaned_data['password_confirm'],
+                first_name=form.cleaned_data['first_name'],
+                last_name=form.cleaned_data['last_name'],
+                phone=form.cleaned_data['phone'],
+                user_type=form.cleaned_data['user_type'],
+                terms_accepted=form.cleaned_data['terms_accepted']
             )
             
-            # Criar perfil específico
-            if user_type == 'seller' or user_type == 'both':
-                SellerProfile.objects.create(
-                    user=user,
-                    seller_type='individual',
-                    address=request.POST.get('address', ''),
-                    city=city or '',
-                    district=district or '',
-                    postal_code=request.POST.get('postal_code', ''),
-                    description=request.POST.get('description', '')
-                )
+            success, user, message = AuthService.register_user(register_data)
             
-            if user_type == 'buyer' or user_type == 'both':
-                BuyerProfile.objects.create(
-                    user=user,
-                    preferred_brands=request.POST.get('preferred_brands', ''),
-                    max_budget=request.POST.get('max_budget') or None
-                )
-            
-            # Fazer login automático
-            login(request, user)
-            messages.success(request, 'Conta criada com sucesso! Bem-vindo ao CarZone!')
-            
-            return redirect('dashboard:home')
-            
-        except Exception as e:
-            messages.error(request, f'Erro ao criar conta: {str(e)}')
+            if success:
+                messages.success(request, message + ' Pode fazer login agora.')
+                return redirect('authentication:login')
+            else:
+                messages.error(request, message)
+        else:
+            messages.error(request, 'Por favor, corrija os erros abaixo.')
     
-    return render(request, 'authentication/register.html')
+    context = {
+        'form': form,
+        'title': 'Criar Conta'
+    }
+    
+    return render(request, 'authentication/register.html', context)
 
 
 @login_required
 def logout_view(request):
-    """
-    View para logout
-    """
-    user_name = request.user.get_full_name() or request.user.username
-    logout(request)
-    messages.success(request, f'Até logo, {user_name}!')
+    """View para logout"""
+    if AuthService.logout_user(request):
+        messages.success(request, 'Logout realizado com sucesso.')
+    else:
+        messages.error(request, 'Erro ao fazer logout.')
+    
     return redirect('home')
 
 
+@csrf_exempt
 def check_username(request):
-    """
-    AJAX view para verificar se username já existe
-    """
-    if request.method == 'GET':
-        username = request.GET.get('username')
-        if username:
-            exists = User.objects.filter(username=username).exists()
-            return JsonResponse({'exists': exists})
-    
+    """AJAX view para verificar se username existe"""
+    if request.method == 'POST':
+        username = request.POST.get('username', '')
+        exists = AuthService.check_username_exists(username.lower().strip())
+        return JsonResponse({'exists': exists})
     return JsonResponse({'exists': False})
 
 
+@csrf_exempt
 def check_email(request):
-    """
-    AJAX view para verificar se email já existe
-    """
-    if request.method == 'GET':
-        email = request.GET.get('email')
-        if email:
-            exists = User.objects.filter(email=email).exists()
-            return JsonResponse({'exists': exists})
-    
+    """AJAX view para verificar se email existe"""
+    if request.method == 'POST':
+        email = request.POST.get('email', '')
+        exists = AuthService.check_email_exists(email.lower().strip())
+        return JsonResponse({'exists': exists})
     return JsonResponse({'exists': False})
