@@ -1,0 +1,396 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Adicionar Carro - CarZone{% endblock %}
+{% block page_title %}Adicionar Novo Carro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Adicionar Novo Carro
+                </h5>
+            </div>
+            
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="card-body">
+                    <!-- Informações Básicas -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Informações Básicas
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            <label for="title" class="form-label">Título do Anúncio *</label>
+                            <input type="text" class="form-control" id="title" name="title" required
+                                   placeholder="Ex: BMW Série 3 320d em excelente estado">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="brand" class="form-label">Marca *</label>
+                            <select class="form-select" id="brand" name="brand" required onchange="loadModels()">
+                                <option value="">Selecione uma marca</option>
+                                {% for brand in brands %}
+                                    <option value="{{ brand.id }}">{{ brand.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="car_model" class="form-label">Modelo *</label>
+                            <select class="form-select" id="car_model" name="car_model" required disabled>
+                                <option value="">Primeiro selecione uma marca</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="version" class="form-label">Versão</label>
+                            <input type="text" class="form-control" id="version" name="version"
+                                   placeholder="Ex: 320d xDrive Luxury">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="year" class="form-label">Ano *</label>
+                            <select class="form-select" id="year" name="year" required>
+                                <option value="">Selecione o ano</option>
+                                {% for year in years %}
+                                    <option value="{{ year }}">{{ year }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="color" class="form-label">Cor *</label>
+                            <input type="text" class="form-control" id="color" name="color" required
+                                   placeholder="Ex: Branco Pérola">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="license_plate" class="form-label">Matrícula *</label>
+                            <input type="text" class="form-control" id="license_plate" name="license_plate" required
+                                   placeholder="Ex: 12-AB-34" pattern="[0-9]{2}-[A-Z]{2}-[0-9]{2}">
+                        </div>
+                    </div>
+
+                    <!-- Especificações Técnicas -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-cog me-2"></i>
+                                Especificações Técnicas
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="fuel_type" class="form-label">Combustível *</label>
+                            <select class="form-select" id="fuel_type" name="fuel_type" required>
+                                <option value="">Selecione o combustível</option>
+                                {% for value, label in fuel_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="transmission" class="form-label">Transmissão *</label>
+                            <select class="form-select" id="transmission" name="transmission" required>
+                                <option value="">Selecione a transmissão</option>
+                                {% for value, label in transmission_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="engine_size" class="form-label">Cilindrada (L)</label>
+                            <input type="number" class="form-control" id="engine_size" name="engine_size" 
+                                   step="0.1" min="0.5" max="8.0" placeholder="Ex: 2.0">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="power" class="form-label">Potência (CV)</label>
+                            <input type="number" class="form-control" id="power" name="power" 
+                                   min="50" max="1000" placeholder="Ex: 150">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="mileage" class="form-label">Quilometragem (km) *</label>
+                            <input type="number" class="form-control" id="mileage" name="mileage" required
+                                   min="0" placeholder="Ex: 50000">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="doors" class="form-label">Portas *</label>
+                            <select class="form-select" id="doors" name="doors" required>
+                                {% for value, label in door_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="seats" class="form-label">Lugares *</label>
+                            <input type="number" class="form-control" id="seats" name="seats" required
+                                   min="2" max="9" value="5">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="condition" class="form-label">Estado *</label>
+                            <select class="form-select" id="condition" name="condition" required>
+                                <option value="">Selecione o estado</option>
+                                {% for value, label in condition_choices %}
+                                    <option value="{{ value }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Preço e Localização -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-euro-sign me-2"></i>
+                                Preço e Localização
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="price" class="form-label">Preço (€) *</label>
+                            <input type="number" class="form-control" id="price" name="price" required
+                                   min="500" step="100" placeholder="Ex: 15000">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check mt-4">
+                                <input class="form-check-input" type="checkbox" id="negotiable" name="negotiable" checked>
+                                <label class="form-check-label" for="negotiable">
+                                    Preço negociável
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="city" class="form-label">Cidade *</label>
+                            <input type="text" class="form-control" id="city" name="city" required
+                                   placeholder="Ex: Lisboa">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="district" class="form-label">Distrito *</label>
+                            <input type="text" class="form-control" id="district" name="district" required
+                                   placeholder="Ex: Lisboa">
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="postal_code" class="form-label">Código Postal</label>
+                            <input type="text" class="form-control" id="postal_code" name="postal_code"
+                                   placeholder="1000-000" pattern="[0-9]{4}-[0-9]{3}">
+                        </div>
+                    </div>
+
+                    <!-- Equipamentos -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-list-check me-2"></i>
+                                Equipamentos
+                            </h6>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="air_conditioning" name="air_conditioning">
+                                <label class="form-check-label" for="air_conditioning">
+                                    <i class="fas fa-snowflake me-2"></i>Ar Condicionado
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="gps" name="gps">
+                                <label class="form-check-label" for="gps">
+                                    <i class="fas fa-map-marked-alt me-2"></i>GPS
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="bluetooth" name="bluetooth">
+                                <label class="form-check-label" for="bluetooth">
+                                    <i class="fab fa-bluetooth me-2"></i>Bluetooth
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="parking_sensors" name="parking_sensors">
+                                <label class="form-check-label" for="parking_sensors">
+                                    <i class="fas fa-parking me-2"></i>Sensores de Estacionamento
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="backup_camera" name="backup_camera">
+                                <label class="form-check-label" for="backup_camera">
+                                    <i class="fas fa-video me-2"></i>Câmara de Marcha-atrás
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="leather_seats" name="leather_seats">
+                                <label class="form-check-label" for="leather_seats">
+                                    <i class="fas fa-couch me-2"></i>Bancos em Pele
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="electric_windows" name="electric_windows">
+                                <label class="form-check-label" for="electric_windows">
+                                    <i class="fas fa-window-maximize me-2"></i>Vidros Elétricos
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="central_locking" name="central_locking">
+                                <label class="form-check-label" for="central_locking">
+                                    <i class="fas fa-lock me-2"></i>Fecho Central
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="abs_brakes" name="abs_brakes">
+                                <label class="form-check-label" for="abs_brakes">
+                                    <i class="fas fa-shield-alt me-2"></i>ABS
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="airbags" name="airbags">
+                                <label class="form-check-label" for="airbags">
+                                    <i class="fas fa-shield-virus me-2"></i>Airbags
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descrição -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary mb-3">
+                                <i class="fas fa-file-alt me-2"></i>
+                                Descrição
+                            </h6>
+                        </div>
+                        
+                        <div class="col-12 mb-3">
+                            <label for="description" class="form-label">Descrição Detalhada *</label>
+                            <textarea class="form-control" id="description" name="description" rows="5" required
+                                      placeholder="Descreva o carro em detalhe: estado geral, histórico, extras, motivo da venda, etc."></textarea>
+                            <div class="form-text">Mínimo 50 caracteres. Uma boa descrição aumenta as hipóteses de venda.</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card-footer">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dashboard:car_list' %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            Adicionar Carro
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function loadModels() {
+        const brandSelect = document.getElementById('brand');
+        const modelSelect = document.getElementById('car_model');
+        const brandId = brandSelect.value;
+        
+        // Limpar modelos
+        modelSelect.innerHTML = '<option value="">Carregando...</option>';
+        modelSelect.disabled = true;
+        
+        if (brandId) {
+            fetch(`/dashboard/api/modelos/?brand_id=${brandId}`)
+                .then(response => response.json())
+                .then(data => {
+                    modelSelect.innerHTML = '<option value="">Selecione um modelo</option>';
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = model.id;
+                        option.textContent = model.name;
+                        modelSelect.appendChild(option);
+                    });
+                    modelSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    modelSelect.innerHTML = '<option value="">Erro ao carregar modelos</option>';
+                });
+        } else {
+            modelSelect.innerHTML = '<option value="">Primeiro selecione uma marca</option>';
+            modelSelect.disabled = true;
+        }
+    }
+    
+    // Validação do formulário
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const description = document.getElementById('description');
+        
+        form.addEventListener('submit', function(e) {
+            if (description.value.length < 50) {
+                e.preventDefault();
+                alert('A descrição deve ter pelo menos 50 caracteres.');
+                description.focus();
+                return false;
+            }
+        });
+        
+        // Contador de caracteres na descrição
+        description.addEventListener('input', function() {
+            const count = this.value.length;
+            const formText = this.nextElementSibling;
+            
+            if (count < 50) {
+                formText.textContent = `${count}/50 caracteres mínimos. Uma boa descrição aumenta as hipóteses de venda.`;
+                formText.className = 'form-text text-danger';
+            } else {
+                formText.textContent = `${count} caracteres. Ótima descrição!`;
+                formText.className = 'form-text text-success';
+            }
+        });
+    });
+</script>
+{% endblock %} 

@@ -1,7 +1,7 @@
 # forms.py
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
-from authenticate.models  import User, SellerProfile, BuyerProfile
+from ..accounts.models import User,  SellerProfile, BuyerProfile
 
 class BuyerRegistrationForm(UserCreationForm):
     """

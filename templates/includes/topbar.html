@@ -13,12 +13,21 @@
             </div>
             <div class="col-lg-4 col-md-4 col-sm-5">
                 <ul class="top-social-media pull-right">
+                    {% if user.is_authenticated %}
                     <li>
-                        <a href="{% url 'login' %}" class="sign-in"><i class="fa fa-sign-in"></i> Login</a>
+                        <a href="{% url 'dashboard:home' %}" class="sign-in"><i class="fa fa-tachometer-alt"></i> Dashboard</a>
                     </li>
                     <li>
-                        <a href="{% url 'register' %}" class="sign-in"><i class="fa fa-user"></i> Register</a>
+                        <a href="{% url 'authentication:logout' %}" class="sign-in"><i class="fa fa-sign-out"></i> Sair</a>
                     </li>
+                    {% else %}
+                    <li>
+                        <a href="{% url 'authentication:login' %}" class="sign-in"><i class="fa fa-sign-in"></i> Login</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'authentication:register' %}" class="sign-in"><i class="fa fa-user"></i> Register</a>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

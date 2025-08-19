@@ -5,17 +5,6 @@ from service import team_service
 from django.views.generic import CreateView, TemplateView
 
 
-# Create your views here.
-class HomeView(TemplateView):
-    """
-    Página inicial com opções de registro
-    """
-    template_name = 'registration/home.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['recent_cars'] = Car.objects.filter(status='available')[:6]
-        return context
 
 
 def home(request):
@@ -56,10 +45,3 @@ def car_detail(request):
 
 
 
-def register(request):
-    return render(request, "pages/register.html")
-
-
-
-def login(request):
-    return render(request, "pages/login.html")

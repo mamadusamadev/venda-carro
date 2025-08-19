@@ -1,0 +1,481 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Meus Carros - CarZone{% endblock %}
+{% block page_title %}Meus Carros{% endblock %}
+
+{% block content %}
+<!-- Estatísticas do Utilizador -->
+<div class="row mb-4">
+    <div class="col-lg-2 col-md-4 col-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-primary mb-2">
+                    <i class="fas fa-car"></i>
+                </div>
+                <h4>{{ total_cars }}</h4>
+                <p class="text-muted mb-0">Total</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-2 col-md-4 col-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-success mb-2">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h4>{{ active_cars }}</h4>
+                <p class="text-muted mb-0">Ativos</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-2 col-md-4 col-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-warning mb-2">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <h4>{{ sold_cars }}</h4>
+                <p class="text-muted mb-0">Vendidos</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-2 col-md-4 col-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-info mb-2">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <h4>{{ total_views }}</h4>
+                <p class="text-muted mb-0">Visualizações</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-2 col-md-4 col-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-danger mb-2">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h4>{{ total_favorites }}</h4>
+                <p class="text-muted mb-0">Favoritos</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-2 col-md-4 col-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-primary mb-2">
+                    <i class="fas fa-plus"></i>
+                </div>
+                <a href="{% url 'dashboard:car_add' %}" class="btn btn-primary btn-sm mt-2">
+                    Adicionar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Carros -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-user-car me-2"></i>
+            Meus Carros
+        </h5>
+        <a href="{% url 'dashboard:car_add' %}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i>
+            Adicionar Carro
+        </a>
+    </div>
+    
+    <div class="card-body">
+        {% if page_obj %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Foto</th>
+                        <th>Carro</th>
+                        <th>Preço</th>
+                        <th>Estado</th>
+                        <th>Visualizações</th>
+                        <th>Favoritos</th>
+                        <th>Data</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for car in page_obj %}
+                    <tr>
+                        <td>
+                            {% if car.get_main_photo %}
+                                <img src="{{ car.get_main_photo.photo.url }}" 
+                                     class="rounded" width="60" height="45" 
+                                     style="object-fit: cover;" alt="{{ car.title }}">
+                            {% else %}
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                     style="width: 60px; height: 45px;">
+                                    <i class="fas fa-car text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+                        
+                        <td>
+                            <div>
+                                <strong>{{ car.brand.name }} {{ car.car_model.name }}</strong>
+                                {% if car.version %}
+                                    <small class="text-muted d-block">{{ car.version }}</small>
+                                {% endif %}
+                                <small class="text-muted">
+                                    {{ car.year }} • {{ car.mileage|floatformat:0 }} km • {{ car.get_fuel_type_display }}
+                                </small>
+                            </div>
+                        </td>
+                        
+                        <td>
+                            <strong class="text-success">€{{ car.price|floatformat:0 }}</strong>
+                            {% if car.negotiable %}
+                                <small class="text-muted d-block">Negociável</small>
+                            {% endif %}
+                        </td>
+                        
+                        <td>
+                            <span class="status-badge status-{{ car.status }}">
+                                {{ car.get_status_display }}
+                            </span>
+                        </td>
+                        
+                        <td>
+                            <span class="badge bg-info">{{ car.views }}</span>
+                        </td>
+                        
+                        <td>
+                            <span class="badge bg-danger">{{ car.favorites_count }}</span>
+                        </td>
+                        
+                        <td>
+                            <small class="text-muted">
+                                {{ car.created_at|date:"d/m/Y" }}
+                            </small>
+                        </td>
+                        
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'dashboard:car_detail' car.id %}" 
+                                   class="btn btn-sm btn-outline-primary" title="Ver Detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                
+                                <a href="{% url 'dashboard:car_edit' car.id %}" 
+                                   class="btn btn-sm btn-outline-warning" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                
+                                <button class="btn btn-sm btn-outline-danger" 
+                                        onclick="deleteCar('{{ car.id }}', '{{ car.title }}')" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            type="button" data-bs-toggle="dropdown" title="Mais Opções">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {% if car.status == 'active' %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="changeStatus('{{ car.id }}', 'inactive')">
+                                                <i class="fas fa-pause me-2"></i>Desativar
+                                            </a>
+                                        </li>
+                                        {% elif car.status == 'inactive' %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="changeStatus('{{ car.id }}', 'active')">
+                                                <i class="fas fa-play me-2"></i>Ativar
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        
+                                        {% if car.status == 'active' %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" 
+                                               onclick="changeStatus('{{ car.id }}', 'sold')">
+                                                <i class="fas fa-handshake me-2"></i>Marcar como Vendido
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        
+                                        <li><hr class="dropdown-divider"></li>
+                                        
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="duplicateCar('{{ car.id }}')">
+                                                <i class="fas fa-copy me-2"></i>Duplicar
+                                            </a>
+                                        </li>
+                                        
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="shareCar('{{ car.id }}')">
+                                                <i class="fas fa-share me-2"></i>Partilhar
+                                            </a>
+                                        </li>
+                                        
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="viewStatistics('{{ car.id }}')">
+                                                <i class="fas fa-chart-bar me-2"></i>Estatísticas
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginação -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navegação da página" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">Primeira</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-car fs-1 text-muted mb-3"></i>
+            <h5 class="text-muted">Ainda não tem carros anunciados</h5>
+            <p class="text-muted">Comece por adicionar o seu primeiro carro!</p>
+            <a href="{% url 'dashboard:car_add' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Adicionar Primeiro Carro
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Eliminação -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem a certeza que deseja eliminar o carro <strong id="carTitle"></strong>?</p>
+                <p class="text-danger">Esta ação não pode ser desfeita e eliminará:</p>
+                <ul class="text-danger">
+                    <li>O anúncio do carro</li>
+                    <li>Todas as fotos associadas</li>
+                    <li>Histórico de preços</li>
+                    <li>Mensagens relacionadas</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar Definitivamente</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Estatísticas -->
+<div class="modal fade" id="statisticsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Estatísticas do Carro</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="statisticsContent">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function deleteCar(carId, carTitle) {
+        document.getElementById('carTitle').textContent = carTitle;
+        document.getElementById('deleteForm').action = `/dashboard/carros/${carId}/eliminar/`;
+        
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    }
+    
+    function changeStatus(carId, newStatus) {
+        if (confirm('Tem a certeza que deseja alterar o estado deste carro?')) {
+            // Aqui seria feita uma chamada AJAX para alterar o estado
+            // Por agora, vamos recarregar a página
+            fetch(`/dashboard/carros/${carId}/status/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({status: newStatus})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Erro ao alterar estado do carro.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erro ao alterar estado do carro.');
+            });
+        }
+    }
+    
+    function duplicateCar(carId) {
+        if (confirm('Deseja criar uma cópia deste carro?')) {
+            window.location.href = `/dashboard/carros/${carId}/duplicar/`;
+        }
+    }
+    
+    function shareCar(carId) {
+        const url = `${window.location.origin}/dashboard/carros/${carId}/`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'Confira este carro!',
+                url: url
+            });
+        } else {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link copiado para a área de transferência!');
+            });
+        }
+    }
+    
+    function viewStatistics(carId) {
+        const modal = new bootstrap.Modal(document.getElementById('statisticsModal'));
+        const content = document.getElementById('statisticsContent');
+        
+        // Reset content
+        content.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Carregando...</span>
+                </div>
+            </div>
+        `;
+        
+        modal.show();
+        
+        // Simular carregamento de estatísticas
+        setTimeout(() => {
+            content.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-primary">247</h3>
+                                <p class="mb-0">Visualizações</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-danger">12</h3>
+                                <p class="mb-0">Favoritos</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-info">8</h3>
+                                <p class="mb-0">Mensagens</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="card text-center">
+                            <div class="card-body">
+                                <h3 class="text-warning">15</h3>
+                                <p class="mb-0">Dias Online</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <h6>Visualizações por Dia (Última Semana)</h6>
+                    <canvas id="viewsChart" height="100"></canvas>
+                </div>
+            `;
+            
+            // Criar gráfico simples
+            const ctx = document.getElementById('viewsChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],
+                    datasets: [{
+                        label: 'Visualizações',
+                        data: [12, 19, 8, 15, 22, 18, 25],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }, 1000);
+    }
+</script>
+{% endblock %} 

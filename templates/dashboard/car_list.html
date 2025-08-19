@@ -1,0 +1,382 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Lista de Carros - CarZone{% endblock %}
+{% block page_title %}Lista de Carros{% endblock %}
+
+{% block content %}
+<!-- Filtros -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-filter me-2"></i>
+            Filtros de Pesquisa
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label">Pesquisar</label>
+                <input type="text" class="form-control" id="search" name="search" 
+                       value="{{ current_filters.search }}" placeholder="Título, marca, modelo...">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="brand" class="form-label">Marca</label>
+                <select class="form-select" id="brand" name="brand">
+                    <option value="">Todas as marcas</option>
+                    {% for brand in brands %}
+                        <option value="{{ brand.id }}" 
+                                {% if current_filters.brand == brand.id|stringformat:"s" %}selected{% endif %}>
+                            {{ brand.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="status" class="form-label">Estado</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">Todos os estados</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" 
+                                {% if current_filters.status == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="fuel_type" class="form-label">Combustível</label>
+                <select class="form-select" id="fuel_type" name="fuel_type">
+                    <option value="">Todos os tipos</option>
+                    {% for value, label in fuel_choices %}
+                        <option value="{{ value }}" 
+                                {% if current_filters.fuel_type == value %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label for="year" class="form-label">Ano</label>
+                <select class="form-select" id="year" name="year">
+                    <option value="">Todos os anos</option>
+                    {% for year_option in years %}
+                        <option value="{{ year_option }}" 
+                                {% if current_filters.year == year_option|stringformat:"s" %}selected{% endif %}>
+                            {{ year_option }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-1">
+                <label class="form-label">&nbsp;</label>
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </form>
+        
+        <!-- Filtros de Preço -->
+        <div class="row g-3 mt-2">
+            <div class="col-md-2">
+                <label for="min_price" class="form-label">Preço Mínimo (€)</label>
+                <input type="number" class="form-control" id="min_price" name="min_price" 
+                       value="{{ current_filters.min_price }}" placeholder="0">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="max_price" class="form-label">Preço Máximo (€)</label>
+                <input type="number" class="form-control" id="max_price" name="max_price" 
+                       value="{{ current_filters.max_price }}" placeholder="100000">
+            </div>
+            
+            <div class="col-md-2">
+                <label for="order_by" class="form-label">Ordenar por</label>
+                <select class="form-select" id="order_by" name="order_by">
+                    <option value="-created_at" {% if current_filters.order_by == "-created_at" %}selected{% endif %}>
+                        Mais recente
+                    </option>
+                    <option value="created_at" {% if current_filters.order_by == "created_at" %}selected{% endif %}>
+                        Mais antigo
+                    </option>
+                    <option value="price" {% if current_filters.order_by == "price" %}selected{% endif %}>
+                        Preço (menor)
+                    </option>
+                    <option value="-price" {% if current_filters.order_by == "-price" %}selected{% endif %}>
+                        Preço (maior)
+                    </option>
+                    <option value="year" {% if current_filters.order_by == "year" %}selected{% endif %}>
+                        Ano (antigo)
+                    </option>
+                    <option value="-year" {% if current_filters.order_by == "-year" %}selected{% endif %}>
+                        Ano (recente)
+                    </option>
+                    <option value="mileage" {% if current_filters.order_by == "mileage" %}selected{% endif %}>
+                        Quilometragem
+                    </option>
+                </select>
+            </div>
+            
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <a href="{% url 'dashboard:car_list' %}" class="btn btn-outline-secondary w-100">
+                    <i class="fas fa-times me-2"></i>Limpar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Resultados -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-car me-2"></i>
+            Carros Encontrados ({{ page_obj.paginator.count }})
+        </h5>
+        <a href="{% url 'dashboard:car_add' %}" class="btn btn-success">
+            <i class="fas fa-plus me-2"></i>
+            Adicionar Carro
+        </a>
+    </div>
+    
+    <div class="card-body">
+        {% if page_obj %}
+        <div class="row">
+            {% for car in page_obj %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="car-card card h-100">
+                    {% if car.get_main_photo %}
+                        <img src="{{ car.get_main_photo.photo.url }}" class="car-image" alt="{{ car.title }}">
+                    {% else %}
+                        <div class="car-image bg-light d-flex align-items-center justify-content-center">
+                            <i class="fas fa-car fs-1 text-muted"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ car.brand.name }} {{ car.car_model.name }}</h5>
+                            <button class="btn btn-link p-0 text-danger" onclick="toggleFavorite('{{ car.id }}', this)">
+                                <i class="fas fa-heart"></i>
+                            </button>
+                        </div>
+                        
+                        <p class="card-text text-muted mb-2">
+                            {{ car.version }} • {{ car.year }} • {{ car.mileage|floatformat:0 }} km
+                        </p>
+                        
+                        <p class="card-text">{{ car.description|truncatewords:15 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="price-tag">€{{ car.price|floatformat:0 }}</span>
+                            <span class="status-badge status-{{ car.status }}">
+                                {{ car.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="row text-center mb-3">
+                            <div class="col-4">
+                                <small class="text-muted d-block">Combustível</small>
+                                <strong>{{ car.get_fuel_type_display }}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Transmissão</small>
+                                <strong>{{ car.get_transmission_display }}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted d-block">Visualizações</small>
+                                <strong>{{ car.views }}</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="fas fa-map-marker-alt me-1"></i>
+                                {{ car.city }}, {{ car.district }}
+                            </small>
+                            <small class="text-muted">
+                                {{ car.created_at|date:"d/m/Y" }}
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-transparent border-0">
+                        <div class="row g-2">
+                            <div class="col-8">
+                                <a href="{% url 'dashboard:car_detail' car.id %}" class="btn btn-primary w-100">
+                                    Ver Detalhes
+                                </a>
+                            </div>
+                            <div class="col-4">
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {% if car.seller == user %}
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'dashboard:car_edit' car.id %}">
+                                                <i class="fas fa-edit me-2"></i>Editar
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item text-danger" href="#" 
+                                               onclick="deleteCar('{{ car.id }}', '{{ car.title }}')">
+                                                <i class="fas fa-trash me-2"></i>Eliminar
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        {% endif %}
+                                        <li>
+                                            <a class="dropdown-item" href="#" onclick="shareCar('{{ car.id }}')">
+                                                <i class="fas fa-share me-2"></i>Partilhar
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Paginação -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navegação da página">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Primeira
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Anterior
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <li class="page-item active">
+                    <span class="page-link">
+                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+                
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Próxima
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                            Última
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+        
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-search fs-1 text-muted mb-3"></i>
+            <h5 class="text-muted">Nenhum carro encontrado</h5>
+            <p class="text-muted">Tente ajustar os filtros de pesquisa.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Eliminação -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem a certeza que deseja eliminar o carro <strong id="carTitle"></strong>?</p>
+                <p class="text-danger">Esta ação não pode ser desfeita.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleFavorite(carId, button) {
+        fetch(`/dashboard/favoritos/${carId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const icon = button.querySelector('i');
+                if (data.is_favorited) {
+                    icon.style.color = '#e74c3c';
+                } else {
+                    icon.style.color = '#6c757d';
+                }
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+    
+    function deleteCar(carId, carTitle) {
+        document.getElementById('carTitle').textContent = carTitle;
+        document.getElementById('deleteForm').action = `/dashboard/carros/${carId}/eliminar/`;
+        
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    }
+    
+    function shareCar(carId) {
+        const url = `${window.location.origin}/dashboard/carros/${carId}/`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'Confira este carro!',
+                url: url
+            });
+        } else {
+            navigator.clipboard.writeText(url).then(() => {
+                alert('Link copiado para a área de transferência!');
+            });
+        }
+    }
+    
+    // Auto-submit form when filters change
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const selects = form.querySelectorAll('select');
+        
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                form.submit();
+            });
+        });
+    });
+</script>
+{% endblock %} 
