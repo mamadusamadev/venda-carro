@@ -123,6 +123,14 @@ class User(AbstractUser):
         """Retorna nome completo ou username se nome não disponível"""
         full_name = self.get_full_name()
         return full_name if full_name else self.username
+    
+    def is_seller(self):
+        """Verifica se o utilizador é vendedor (compatibilidade)"""
+        return self.can_sell()
+    
+    def is_buyer(self):
+        """Verifica se o utilizador é comprador (compatibilidade)"""
+        return self.can_buy()
 
 
 class SellerProfile(models.Model):

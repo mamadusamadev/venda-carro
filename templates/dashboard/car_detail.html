@@ -1,0 +1,491 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ car.title }} - CarZone{% endblock %}
+{% block page_title %}Detalhes do Carro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Informações Principais -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title mb-0">{{ car.title }}</h5>
+                    <small class="text-muted">
+                        <i class="fas fa-eye me-1"></i>{{ car.views }} visualizações
+                        <i class="fas fa-heart ms-3 me-1"></i>{{ car.favorites_count }} favoritos
+                    </small>
+                </div>
+                <div>
+                    {% if car.seller == request.user %}
+                        <a href="{% url 'dashboard:car_edit' car.id %}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit me-1"></i>Editar
+                        </a>
+                        <button class="btn btn-danger btn-sm" onclick="deleteCar()">
+                            <i class="fas fa-trash me-1"></i>Eliminar
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Galeria de Fotos -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-images me-2"></i>Fotos do Carro
+                        </h6>
+                        
+                        {% if photos %}
+                            <div id="carCarousel" class="carousel slide" data-bs-ride="carousel">
+                                <div class="carousel-inner">
+                                    {% for photo in photos %}
+                                        <div class="carousel-item {% if forloop.first %}active{% endif %}">
+                                            <img src="{{ photo.photo.url }}" class="d-block w-100" alt="{{ photo.caption|default:car.title }}" style="height: 400px; object-fit: cover; border-radius: 8px;">
+                                            {% if photo.caption %}
+                                                <div class="carousel-caption d-none d-md-block">
+                                                    <p>{{ photo.caption }}</p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                
+                                {% if photos.count > 1 %}
+                                    <button class="carousel-control-prev" type="button" data-bs-target="#carCarousel" data-bs-slide="prev">
+                                        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Anterior</span>
+                                    </button>
+                                    <button class="carousel-control-next" type="button" data-bs-target="#carCarousel" data-bs-slide="next">
+                                        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                        <span class="visually-hidden">Próximo</span>
+                                    </button>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Thumbnails -->
+                            {% if photos.count > 1 %}
+                                <div class="row mt-3">
+                                    {% for photo in photos %}
+                                        <div class="col-2">
+                                            <img src="{{ photo.photo.url }}" class="img-thumbnail" alt="{{ photo.caption|default:car.title }}" 
+                                                 onclick="goToSlide({{ forloop.counter0 }})" style="cursor: pointer; height: 60px; object-fit: cover;">
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <div class="text-center py-5 bg-light rounded">
+                                <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Nenhuma foto disponível</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Informações Básicas -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Informações Básicas
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Marca:</strong></td>
+                                <td>{{ car.brand.name }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Modelo:</strong></td>
+                                <td>{{ car.car_model.name }}</td>
+                            </tr>
+                            {% if car.version %}
+                            <tr>
+                                <td><strong>Versão:</strong></td>
+                                <td>{{ car.version }}</td>
+                            </tr>
+                            {% endif %}
+                            <tr>
+                                <td><strong>Ano:</strong></td>
+                                <td>{{ car.year }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Combustível:</strong></td>
+                                <td>{{ car.get_fuel_type_display }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Transmissão:</strong></td>
+                                <td>{{ car.get_transmission_display }}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <table class="table table-borderless">
+                            <tr>
+                                <td><strong>Quilometragem:</strong></td>
+                                <td>{{ car.mileage|floatformat:0 }} km</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Cor:</strong></td>
+                                <td>{{ car.color }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Portas:</strong></td>
+                                <td>{{ car.doors }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Lugares:</strong></td>
+                                <td>{{ car.seats }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Estado:</strong></td>
+                                <td>{{ car.get_condition_display }}</td>
+                            </tr>
+                            {% if car.license_plate %}
+                            <tr>
+                                <td><strong>Matrícula:</strong></td>
+                                <td>{{ car.license_plate }}</td>
+                            </tr>
+                            {% endif %}
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Motor e Performance -->
+                {% if car.engine_size or car.power %}
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-cog me-2"></i>Motor e Performance
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        {% if car.engine_size %}
+                        <p><strong>Cilindrada:</strong> {{ car.engine_size }}L</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        {% if car.power %}
+                        <p><strong>Potência:</strong> {{ car.power }} CV</p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Equipamentos -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-list-check me-2"></i>Equipamentos
+                        </h6>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="row">
+                            {% if car.air_conditioning %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-snowflake text-success me-2"></i>Ar Condicionado
+                                </div>
+                            {% endif %}
+                            {% if car.gps %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-map-marked-alt text-success me-2"></i>GPS
+                                </div>
+                            {% endif %}
+                            {% if car.bluetooth %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fab fa-bluetooth text-success me-2"></i>Bluetooth
+                                </div>
+                            {% endif %}
+                            {% if car.parking_sensors %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-parking text-success me-2"></i>Sensores de Estacionamento
+                                </div>
+                            {% endif %}
+                            {% if car.backup_camera %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-video text-success me-2"></i>Câmara de Marcha-atrás
+                                </div>
+                            {% endif %}
+                            {% if car.leather_seats %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-chair text-success me-2"></i>Bancos em Pele
+                                </div>
+                            {% endif %}
+                            {% if car.electric_windows %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-window-maximize text-success me-2"></i>Vidros Elétricos
+                                </div>
+                            {% endif %}
+                            {% if car.central_locking %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-lock text-success me-2"></i>Fecho Central
+                                </div>
+                            {% endif %}
+                            {% if car.abs_brakes %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-shield-alt text-success me-2"></i>ABS
+                                </div>
+                            {% endif %}
+                            {% if car.airbags %}
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-shield-virus text-success me-2"></i>Airbags
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Descrição -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-file-alt me-2"></i>Descrição
+                        </h6>
+                        <div class="bg-light p-3 rounded">
+                            <p class="mb-0">{{ car.description|linebreaks }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Localização -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-map-marker-alt me-2"></i>Localização
+                        </h6>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <p><strong>Cidade:</strong> {{ car.city }}</p>
+                        <p><strong>Distrito:</strong> {{ car.district }}</p>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        {% if car.postal_code %}
+                        <p><strong>Código Postal:</strong> {{ car.postal_code }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Histórico de Preços -->
+        {% if price_history %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Histórico de Preços
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Preço Anterior</th>
+                                <th>Novo Preço</th>
+                                <th>Motivo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for history in price_history %}
+                            <tr>
+                                <td>{{ history.created_at|date:"d/m/Y H:i" }}</td>
+                                <td>€{{ history.old_price|floatformat:0 }}</td>
+                                <td>€{{ history.new_price|floatformat:0 }}</td>
+                                <td>{{ history.change_reason }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Preço e Ações -->
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                <h3 class="text-primary mb-3">
+                    €{{ car.price|floatformat:0 }}
+                    {% if car.negotiable %}
+                        <small class="text-muted">(Negociável)</small>
+                    {% endif %}
+                </h3>
+                
+                <div class="d-grid gap-2">
+                    {% if car.seller != request.user %}
+                        <button class="btn btn-success" onclick="contactSeller()">
+                            <i class="fas fa-phone me-2"></i>Contactar Vendedor
+                        </button>
+                        <button class="btn btn-outline-primary" onclick="toggleFavorite()">
+                            <i class="{% if is_favorited %}fas{% else %}far{% endif %} fa-heart me-2"></i>
+                            {% if is_favorited %}Remover dos Favoritos{% else %}Adicionar aos Favoritos{% endif %}
+                        </button>
+                        <button class="btn btn-outline-info" onclick="shareAd()">
+                            <i class="fas fa-share me-2"></i>Partilhar Anúncio
+                        </button>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Este é o seu anúncio
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Informações do Vendedor -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-user me-2"></i>Vendedor
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="avatar me-3">
+                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                    <div>
+                        <h6 class="mb-1">{{ car.seller.get_full_name|default:car.seller.username }}</h6>
+                        <small class="text-muted">Membro desde {{ car.seller.date_joined|date:"M Y" }}</small>
+                    </div>
+                </div>
+                
+                {% if seller_reviews %}
+                <div class="mb-3">
+                    <h6 class="mb-2">Avaliações Recentes:</h6>
+                    {% for review in seller_reviews %}
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between">
+                            <small class="text-muted">{{ review.reviewer.get_full_name|default:review.reviewer.username }}</small>
+                            <div>
+                                {% for i in "12345" %}
+                                    <i class="fas fa-star {% if forloop.counter <= review.rating %}text-warning{% else %}text-muted{% endif %}"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p class="small mb-1">{{ review.comment|truncatewords:10 }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Status do Anúncio -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info me-2"></i>Status do Anúncio
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Estado:</strong>
+                    <span class="badge bg-{% if car.status == 'active' %}success{% elif car.status == 'sold' %}secondary{% elif car.status == 'pending' %}warning{% else %}danger{% endif %}">
+                        {{ car.get_status_display }}
+                    </span>
+                </p>
+                <p class="mb-2"><strong>Publicado:</strong> {{ car.created_at|date:"d/m/Y H:i" }}</p>
+                <p class="mb-0"><strong>Atualizado:</strong> {{ car.updated_at|date:"d/m/Y H:i" }}</p>
+            </div>
+        </div>
+
+        <!-- Carros Similares -->
+        {% if similar_cars %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-car me-2"></i>Carros Similares
+                </h6>
+            </div>
+            <div class="card-body">
+                {% for similar_car in similar_cars %}
+                <div class="d-flex mb-3">
+                    {% if similar_car.photos.first %}
+                        <img src="{{ similar_car.photos.first.photo.url }}" class="me-3" style="width: 60px; height: 45px; object-fit: cover; border-radius: 4px;" alt="{{ similar_car.title }}">
+                    {% else %}
+                        <div class="me-3 bg-light d-flex align-items-center justify-content-center" style="width: 60px; height: 45px; border-radius: 4px;">
+                            <i class="fas fa-car text-muted"></i>
+                        </div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">
+                            <a href="{% url 'dashboard:car_detail' similar_car.id %}" class="text-decoration-none">
+                                {{ similar_car.title|truncatewords:6 }}
+                            </a>
+                        </h6>
+                        <p class="small text-muted mb-1">{{ similar_car.year }} • {{ similar_car.mileage|floatformat:0 }} km</p>
+                        <p class="small text-primary mb-0"><strong>€{{ similar_car.price|floatformat:0 }}</strong></p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+function goToSlide(index) {
+    const carousel = new bootstrap.Carousel(document.getElementById('carCarousel'));
+    carousel.to(index);
+}
+
+function contactSeller() {
+    alert('Funcionalidade de contacto será implementada em breve!');
+}
+
+function toggleFavorite() {
+    // AJAX para adicionar/remover dos favoritos
+    fetch("{% url 'dashboard:toggle_favorite' car.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        }
+    });
+}
+
+function shareAd() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ car.title }}',
+            text: 'Vê este carro na CarZone: {{ car.title }} - €{{ car.price|floatformat:0 }}',
+            url: window.location.href
+        });
+    } else {
+        // Fallback: copiar URL
+        navigator.clipboard.writeText(window.location.href);
+        alert('URL copiada para a área de transferência!');
+    }
+}
+
+function deleteCar() {
+    if (confirm('Tem a certeza que deseja eliminar este carro? Esta ação não pode ser desfeita.')) {
+        window.location.href = "{% url 'dashboard:car_delete' car.id %}";
+    }
+}
+</script>
+
+{% csrf_token %}
+{% endblock %} 

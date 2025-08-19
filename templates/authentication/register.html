@@ -218,136 +218,125 @@
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="first_name" class="form-label">Nome *</label>
-                                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                    <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }} *</label>
+                                    {{ form.first_name }}
+                                    {% if form.first_name.errors %}
+                                        <div class="text-danger mt-1">
+                                            {% for error in form.first_name.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="last_name" class="form-label">Apelido *</label>
-                                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                    <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }} *</label>
+                                    {{ form.last_name }}
+                                    {% if form.last_name.errors %}
+                                        <div class="text-danger mt-1">
+                                            {% for error in form.last_name.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="username" class="form-label">Nome de Utilizador *</label>
-                                    <input type="text" class="form-control" id="username" name="username" required
-                                           onblur="checkUsername()">
+                                    <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }} *</label>
+                                    {{ form.username }}
                                     <div id="username-feedback" class="validation-feedback"></div>
+                                    {% if form.username.errors %}
+                                        <div class="text-danger mt-1">
+                                            {% for error in form.username.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="email" class="form-label">Email *</label>
-                                    <input type="email" class="form-control" id="email" name="email" required
-                                           onblur="checkEmail()">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }} *</label>
+                                    {{ form.email }}
                                     <div id="email-feedback" class="validation-feedback"></div>
+                                    {% if form.email.errors %}
+                                        <div class="text-danger mt-1">
+                                            {% for error in form.email.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="password1" class="form-label">Palavra-passe *</label>
+                                    <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }} *</label>
                                     <div class="input-group">
-                                        <input type="password" class="form-control" id="password1" name="password1" required
-                                               onkeyup="checkPasswordStrength()">
-                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password1')">
+                                        {{ form.password }}
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('{{ form.password.id_for_label }}')">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
                                     <div id="password-strength" class="validation-feedback"></div>
+                                    {% if form.password.errors %}
+                                        <div class="text-danger mt-1">
+                                            {% for error in form.password.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6">
-                                    <label for="password2" class="form-label">Confirmar Palavra-passe *</label>
+                                    <label for="{{ form.password_confirm.id_for_label }}" class="form-label">{{ form.password_confirm.label }} *</label>
                                     <div class="input-group">
-                                        <input type="password" class="form-control" id="password2" name="password2" required
-                                               onkeyup="checkPasswordMatch()">
-                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password2')">
+                                        {{ form.password_confirm }}
+                                        <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('{{ form.password_confirm.id_for_label }}')">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
                                     <div id="password-match" class="validation-feedback"></div>
+                                    {% if form.password_confirm.errors %}
+                                        <div class="text-danger mt-1">
+                                            {% for error in form.password_confirm.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                             
                             <div class="row mb-3">
                                 <div class="col-md-6">
-                                    <label for="phone" class="form-label">Telefone</label>
-                                    <input type="tel" class="form-control" id="phone" name="phone"
-                                           placeholder="+351 912 345 678">
+                                    <label for="{{ form.phone.id_for_label }}" class="form-label">{{ form.phone.label }}</label>
+                                    {{ form.phone }}
+                                    {% if form.phone.errors %}
+                                        <div class="text-danger mt-1">
+                                            {% for error in form.phone.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
 
-                            <!-- Localização -->
-                            <h5 class="section-title">
-                                <i class="fas fa-map-marker-alt me-2"></i>Localização
-                            </h5>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="city" class="form-label">Cidade</label>
-                                    <input type="text" class="form-control" id="city" name="city"
-                                           placeholder="Ex: Lisboa">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="district" class="form-label">Distrito</label>
-                                    <input type="text" class="form-control" id="district" name="district"
-                                           placeholder="Ex: Lisboa">
-                                </div>
-                            </div>
 
-                            <!-- Campos específicos para vendedores -->
-                            <div id="seller-fields" style="display: none;">
-                                <h5 class="section-title">
-                                    <i class="fas fa-store me-2"></i>Informações de Vendedor
-                                </h5>
-                                
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="address" class="form-label">Morada</label>
-                                        <input type="text" class="form-control" id="address" name="address"
-                                               placeholder="Rua, número, andar">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="postal_code" class="form-label">Código Postal</label>
-                                        <input type="text" class="form-control" id="postal_code" name="postal_code"
-                                               placeholder="0000-000">
-                                    </div>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="description" class="form-label">Descrição (Opcional)</label>
-                                    <textarea class="form-control" id="description" name="description" rows="3"
-                                              placeholder="Descreva-se como vendedor..."></textarea>
-                                </div>
-                            </div>
-
-                            <!-- Campos específicos para compradores -->
-                            <div id="buyer-fields">
-                                <h5 class="section-title">
-                                    <i class="fas fa-shopping-cart me-2"></i>Preferências de Compra
-                                </h5>
-                                
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="preferred_brands" class="form-label">Marcas Preferidas</label>
-                                        <input type="text" class="form-control" id="preferred_brands" name="preferred_brands"
-                                               placeholder="Ex: BMW, Mercedes, Audi">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="max_budget" class="form-label">Orçamento Máximo (€)</label>
-                                        <input type="number" class="form-control" id="max_budget" name="max_budget"
-                                               placeholder="Ex: 25000">
-                                    </div>
-                                </div>
-                            </div>
 
                             <!-- Termos e Condições -->
                             <div class="mb-4">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
-                                    <label class="form-check-label" for="terms">
+                                    {{ form.terms_accepted }}
+                                    <label class="form-check-label" for="{{ form.terms_accepted.id_for_label }}">
                                         Aceito os <a href="#" class="link-primary">Termos e Condições</a> 
                                         e a <a href="#" class="link-primary">Política de Privacidade</a> *
                                     </label>
                                 </div>
+                                {% if form.terms_accepted.errors %}
+                                    <div class="text-danger mt-1">
+                                        {% for error in form.terms_accepted.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
                             </div>
                             
                             <button type="submit" class="btn btn-register mb-3">
@@ -381,22 +370,10 @@
             });
             event.currentTarget.classList.add('active');
             
-            // Update hidden field
-            document.getElementById('user_type').value = type;
-            
-            // Show/hide specific fields
-            const sellerFields = document.getElementById('seller-fields');
-            const buyerFields = document.getElementById('buyer-fields');
-            
-            if (type === 'seller') {
-                sellerFields.style.display = 'block';
-                buyerFields.style.display = 'none';
-            } else if (type === 'buyer') {
-                sellerFields.style.display = 'none';
-                buyerFields.style.display = 'block';
-            } else { // both
-                sellerFields.style.display = 'block';
-                buyerFields.style.display = 'block';
+            // Update hidden field - usar o campo do formulário Django
+            const userTypeField = document.querySelector('input[name="user_type"]');
+            if (userTypeField) {
+                userTypeField.value = type;
             }
         }
         

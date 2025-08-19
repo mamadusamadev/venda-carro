@@ -15,6 +15,9 @@ class UserEntity:
         self.__user_type = user_type
         self.__is_active = is_active
         self.__is_verified = is_verified
+        
+        
+        
     
     @property
     def id(self):

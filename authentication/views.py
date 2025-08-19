@@ -20,25 +20,28 @@ def login_view(request):
         form = LoginForm(request.POST)
         
         if form.is_valid():
-            credentials = AuthCredentials(
-                email=form.cleaned_data['email'],
-                password=form.cleaned_data['password']
-            )
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password']
             
-            success, user, message = AuthService.authenticate_user(credentials)
+            # Usar Django authenticate diretamente
+            from django.contrib.auth import authenticate, login
+            user = authenticate(request, username=email, password=password)
             
-            if success and user:
-                # Faz login do utilizador
-                if AuthService.login_user(request, user):
-                    messages.success(request, f'Bem-vindo, {user.first_name or user.username}!')
-                    
-                    # Redireciona para onde o utilizador queria ir ou dashboard
-                    next_url = request.GET.get('next', 'dashboard:home')
-                    return redirect(next_url)
+            if user is not None:
+                if user.is_active:
+                    try:
+                        login(request, user)
+                        messages.success(request, f'Bem-vindo, {user.first_name or user.username}!')
+                        
+                        # Redireciona para onde o utilizador queria ir ou dashboard
+                        next_url = request.GET.get('next', 'dashboard:home')
+                        return redirect(next_url)
+                    except Exception as e:
+                        messages.error(request, 'Erro ao fazer login. Tente novamente.')
                 else:
-                    messages.error(request, 'Erro ao fazer login. Tente novamente.')
+                    messages.error(request, 'Conta desativada. Contacte o administrador.')
             else:
-                messages.error(request, message)
+                messages.error(request, 'Email ou palavra-passe incorretos')
         else:
             messages.error(request, 'Por favor, corrija os erros abaixo.')
     

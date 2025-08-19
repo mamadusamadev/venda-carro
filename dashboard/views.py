@@ -272,6 +272,15 @@ def car_add(request):
                 status='pending'
             )
             
+            # Processar imagem se foi enviada
+            if request.FILES.get('main_image'):
+                from cars.models import CarPhoto
+                CarPhoto.objects.create(
+                    car=car,
+                    photo=request.FILES['main_image'],
+                    is_main=True
+                )
+            
             messages.success(request, 'Carro adicionado com sucesso! Aguarda aprovação.')
             return redirect('dashboard:car_detail', car_id=car.id)
             
@@ -358,6 +367,18 @@ def car_edit(request, car_id):
             car.airbags = request.POST.get('airbags') == 'on'
             
             car.save()
+            
+            # Processar nova imagem se foi enviada
+            if request.FILES.get('main_image'):
+                from cars.models import CarPhoto
+                # Remover imagem principal anterior
+                CarPhoto.objects.filter(car=car, is_main=True).delete()
+                # Criar nova imagem principal
+                CarPhoto.objects.create(
+                    car=car,
+                    photo=request.FILES['main_image'],
+                    is_main=True
+                )
             
             messages.success(request, 'Carro atualizado com sucesso!')
             return redirect('dashboard:car_detail', car_id=car.id)
