@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitação Rejeitada - CarZone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .car-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #e74c3c;
+        }
+        .button {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 CarZone</h1>
+        <h2>Solicitação Não Aprovada</h2>
+    </div>
+    
+    <div class="content">
+        <p>Olá <strong>{{ purchase_request.buyer_name }}</strong>,</p>
+        
+        <p>Infelizmente, a sua solicitação de compra não foi aprovada pelo vendedor.</p>
+        
+        <div class="car-info">
+            <h3>🚗 Carro Solicitado</h3>
+            <p><strong>{{ car.brand.name }} {{ car.car_model.name }}</strong></p>
+            <p>{{ car.version }} • {{ car.year }} • {{ car.mileage|floatformat:0 }} km</p>
+            <p><strong>Preço anunciado:</strong> €{{ car.price|floatformat:0 }}</p>
+            {% if purchase_request.proposed_price %}
+                <p><strong>Preço proposto:</strong> €{{ purchase_request.proposed_price|floatformat:0 }}</p>
+            {% endif %}
+        </div>
+        
+        {% if purchase_request.seller_response %}
+        <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #e74c3c;">
+            <h4>💬 Mensagem do Vendedor:</h4>
+            <p style="font-style: italic;">
+                "{{ purchase_request.seller_response }}"
+            </p>
+            <small class="text-muted">{{ purchase_request.seller_responded_at|date:"d/m/Y H:i" }}</small>
+        </div>
+        {% endif %}
+        
+        <div class="info">
+            <strong>💡 Não desanime!</strong><br>
+            Temos muitos outros carros disponíveis que podem interessar-lhe. 
+            Continue a procurar e encontre o carro perfeito!
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="{{ site_url }}/dashboard/carros/" class="button">
+                🔍 Procurar Outros Carros
+            </a>
+            
+            <a href="{{ site_url }}/dashboard/solicitacoes/{{ purchase_request.id }}/" class="button" style="background: #6c757d;">
+                📋 Ver Detalhes da Solicitação
+            </a>
+        </div>
+        
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <strong>💼 Dica:</strong> Pode tentar fazer uma nova solicitação com uma proposta diferente, 
+            ou contactar diretamente o vendedor para negociar.
+        </div>
+        
+        <p>Obrigado por usar a CarZone. Esperamos que encontre o carro ideal em breve!<br>
+        <strong>Equipa CarZone</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>Este email foi enviado automaticamente. Por favor, não responda diretamente.</p>
+        <p>© {{ "now"|date:"Y" }} CarZone - Todos os direitos reservados</p>
+    </div>
+</body>
+</html>

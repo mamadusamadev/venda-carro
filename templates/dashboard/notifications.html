@@ -265,16 +265,23 @@ function markAsRead(notificationId) {
                     markReadBtn.remove();
                 }
                 
-                // Atualizar contador na sidebar (se existir)
-                const notificationCount = document.getElementById('notification-count');
-                if (notificationCount) {
-                    let count = parseInt(notificationCount.textContent) || 0;
-                    count = Math.max(0, count - 1);
-                    if (count > 0) {
-                        notificationCount.textContent = count;
-                        notificationCount.style.display = 'inline';
-                    } else {
-                        notificationCount.style.display = 'none';
+                // Atualizar contador usando a função global
+                const currentCount = parseInt(document.getElementById('notification-count')?.textContent || '0');
+                const newCount = Math.max(0, currentCount - 1);
+                
+                // Usar a função global se estiver disponível
+                if (typeof updateNotificationCount === 'function') {
+                    updateNotificationCount(newCount);
+                } else {
+                    // Fallback para atualizar apenas o contador da sidebar
+                    const notificationCount = document.getElementById('notification-count');
+                    if (notificationCount) {
+                        if (newCount > 0) {
+                            notificationCount.textContent = newCount;
+                            notificationCount.style.display = 'inline';
+                        } else {
+                            notificationCount.style.display = 'none';
+                        }
                     }
                 }
             }

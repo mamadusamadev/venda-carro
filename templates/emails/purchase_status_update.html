@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atualização da Compra - CarZone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .status-update {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            margin: 5px;
+        }
+        .status-pending { background: #f39c12; }
+        .status-confirmed { background: #27ae60; }
+        .status-preparing { background: #3498db; }
+        .status-transit { background: #9b59b6; }
+        .status-delivered { background: #e67e22; }
+        .status-completed { background: #27ae60; }
+        .status-cancelled { background: #e74c3c; }
+        
+        .button {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 CarZone</h1>
+        <h2>📦 Atualização da Sua Compra</h2>
+    </div>
+    
+    <div class="content">
+        <p>Olá <strong>{{ purchase.buyer_name }}</strong>,</p>
+        
+        <p>Há uma atualização sobre a sua compra!</p>
+        
+        <div class="status-update">
+            <h3>🚗 {{ car.brand.name }} {{ car.car_model.name }}</h3>
+            <p>{{ car.version }} • {{ car.year }} • Compra #{{ purchase.id|slice:":8" }}</p>
+            
+            <div style="margin: 20px 0;">
+                <p><strong>Status Anterior:</strong></p>
+                <span class="status-badge status-{{ old_status }}">{{ purchase.get_status_display }}</span>
+                
+                <div style="text-align: center; margin: 10px 0;">
+                    <i class="fas fa-arrow-down" style="font-size: 20px; color: #3498db;"></i>
+                </div>
+                
+                <p><strong>Novo Status:</strong></p>
+                <span class="status-badge status-{{ new_status }}">{{ purchase.get_status_display }}</span>
+            </div>
+            
+            <p><strong>Valor:</strong> €{{ purchase.purchase_price|floatformat:0 }}</p>
+            <p><strong>Data da atualização:</strong> {{ purchase.updated_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        
+        <div class="info">
+            {% if new_status == 'payment_confirmed' %}
+                <strong>💳 Pagamento Confirmado!</strong><br>
+                O seu pagamento foi processado com sucesso. O vendedor está agora a preparar o carro para entrega.
+            {% elif new_status == 'preparing_delivery' %}
+                <strong>🔧 Preparando Entrega!</strong><br>
+                O vendedor está a preparar o carro para entrega (limpeza, documentos, etc.).
+            {% elif new_status == 'in_transit' %}
+                <strong>🚛 Em Trânsito!</strong><br>
+                O seu carro está a caminho! 
+                {% if purchase.tracking_code %}
+                    <br><strong>Código de rastreamento:</strong> {{ purchase.tracking_code }}
+                {% endif %}
+            {% elif new_status == 'delivered' %}
+                <strong>📦 Entregue!</strong><br>
+                O seu carro foi entregue! Por favor, confirme a receção no sistema para concluir a compra.
+            {% elif new_status == 'completed' %}
+                <strong>🎉 Compra Concluída!</strong><br>
+                Parabéns! A sua compra foi concluída com sucesso. Desfrute do seu novo carro!
+            {% elif new_status == 'cancelled' %}
+                <strong>❌ Compra Cancelada</strong><br>
+                Infelizmente, esta compra foi cancelada. Entre em contacto connosco se tiver dúvidas.
+            {% else %}
+                <strong>📋 Status Atualizado</strong><br>
+                O status da sua compra foi atualizado. Veja os detalhes completos no seu dashboard.
+            {% endif %}
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="{{ site_url }}/dashboard/compras/{{ purchase.id }}/" class="button">
+                📋 Ver Detalhes Completos
+            </a>
+            
+            {% if new_status == 'delivered' %}
+            <a href="{{ site_url }}/dashboard/compras/{{ purchase.id }}/" class="button" style="background: #27ae60;">
+                ✅ Confirmar Receção
+            </a>
+            {% endif %}
+        </div>
+        
+        <div style="background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <strong>📞 Precisa de Ajuda?</strong><br>
+            Se tiver alguma dúvida sobre esta atualização, pode contactar o vendedor através do dashboard 
+            ou a nossa equipa de suporte.
+        </div>
+        
+        <p>Obrigado por escolher a CarZone!<br>
+        <strong>Equipa CarZone</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>Este email foi enviado automaticamente. Por favor, não responda diretamente.</p>
+        <p>© {{ "now"|date:"Y" }} CarZone - Todos os direitos reservados</p>
+    </div>
+</body>
+</html>

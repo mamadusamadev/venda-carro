@@ -44,4 +44,5 @@ urlpatterns = [
     path('notificacoes/', views_purchase.notifications_list, name='notifications'),
     path('notificacoes/<uuid:notification_id>/ler/', views_purchase.notification_mark_read, name='notification_mark_read'),
     path('notificacoes/marcar-todas-lidas/', views_purchase.notifications_mark_all_read, name='notifications_mark_all_read'),
+    path('notificacoes/count/', views_purchase.notifications_count, name='notifications_count'),
 ] 

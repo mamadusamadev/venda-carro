@@ -218,8 +218,17 @@ def car_add(request):
     else:
         form_car = CarForm()
     
+    # Obter dados adicionais para o template
+    from cars.models import Brand, Car
+    
     context = {
-        'form': form_car
+        'form': form_car,
+        'brands': Brand.objects.filter(is_active=True).order_by('name'),
+        'years': range(datetime.now().year + 1, 1989, -1),
+        'fuel_choices': Car.FUEL_CHOICES,
+        'transmission_choices': Car.TRANSMISSION_CHOICES,
+        'condition_choices': Car.CONDITION_CHOICES,
+        'door_choices': Car.DOOR_CHOICES,
     }
     
     return render(request, 'dashboard/car_add.html', context)
@@ -288,9 +297,18 @@ def car_edit(request, car_id):
     else:
         form_car = CarForm(instance=car)
     
+    # Obter dados adicionais para o template
+    from cars.models import Brand, Car
+    
     context = {
         'form': form_car,
-        'car': car
+        'car': car,
+        'brands': Brand.objects.filter(is_active=True).order_by('name'),
+        'years': range(datetime.now().year + 1, 1989, -1),
+        'fuel_choices': Car.FUEL_CHOICES,
+        'transmission_choices': Car.TRANSMISSION_CHOICES,
+        'condition_choices': Car.CONDITION_CHOICES,
+        'door_choices': Car.DOOR_CHOICES,
     }
     
     return render(request, 'dashboard/car_edit.html', context)

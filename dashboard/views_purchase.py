@@ -11,6 +11,7 @@ from django.template.loader import render_to_string
 from cars.models import Car
 from cars.models_purchase import PurchaseRequest, Purchase, PurchaseStatusHistory, Notification
 from forms.purchase_forms import PurchaseRequestForm, PurchaseForm, SellerResponseForm, PurchaseStatusForm
+from services.email_service import EmailService
 
 
 def create_notification(user, notification_type, title, message, **kwargs):
@@ -28,23 +29,6 @@ def create_notification(user, notification_type, title, message, **kwargs):
     )
     return notification
 
-
-def send_email_notification(user, subject, template_name, context):
-    """
-    Função auxiliar para enviar emails
-    """
-    try:
-        html_message = render_to_string(template_name, context)
-        send_mail(
-            subject=subject,
-            message='',
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=False,
-        )
-    except Exception as e:
-        print(f"Erro ao enviar email: {e}")
 
 
 @login_required
@@ -90,19 +74,8 @@ def purchase_request_create(request, car_id):
                 car=car
             )
             
-            # Enviar email para o vendedor
-            send_email_notification(
-                user=car.seller,
-                subject=f'Nova solicitação de compra - {car.title}',
-                template_name='emails/purchase_request_notification.html',
-                context={
-                    'seller': car.seller,
-                    'buyer': purchase_request.buyer_name,
-                    'car': car,
-                    'purchase_request': purchase_request,
-                    'site_url': request.build_absolute_uri('/')
-                }
-            )
+            # Enviar email de notificação para o vendedor
+            EmailService.send_purchase_request_notification(purchase_request)
             
             messages.success(request, 'Solicitação de compra enviada com sucesso! O vendedor será notificado.')
             return redirect('dashboard:purchase_request_detail', request_id=purchase_request.id)
@@ -170,19 +143,9 @@ def purchase_create(request, car_id):
                 car=car
             )
             
-            # Enviar email para o vendedor
-            send_email_notification(
-                user=car.seller,
-                subject=f'Nova compra - {car.title}',
-                template_name='emails/purchase_notification.html',
-                context={
-                    'seller': car.seller,
-                    'buyer': purchase.buyer_name,
-                    'car': car,
-                    'purchase': purchase,
-                    'site_url': request.build_absolute_uri('/')
-                }
-            )
+            # Enviar emails de notificação
+            EmailService.send_purchase_notification(purchase)  # Para o vendedor
+            EmailService.send_purchase_confirmation(purchase)  # Para o comprador
             
             messages.success(request, 'Compra realizada com sucesso! O vendedor foi notificado e irá processar o seu pedido.')
             return redirect('dashboard:purchase_detail', purchase_id=purchase.id)
@@ -235,6 +198,9 @@ def purchase_request_detail(request, request_id):
                 purchase_request=purchase_request,
                 car=purchase_request.car
             )
+            
+            # Enviar email de resposta para o comprador
+            EmailService.send_purchase_request_response(purchase_request)
             
             messages.success(request, 'Resposta enviada com sucesso!')
             return redirect('dashboard:purchase_request_detail', request_id=request_id)
@@ -340,6 +306,9 @@ def purchase_status_update(request, purchase_id):
                 purchase=purchase,
                 car=purchase.car
             )
+            
+            # Enviar email de atualização de status para o comprador
+            EmailService.send_purchase_status_update(purchase, old_status, new_status)
             
             messages.success(request, 'Status atualizado com sucesso!')
             return redirect('dashboard:purchase_detail', purchase_id=purchase_id)
@@ -461,3 +430,22 @@ def notifications_mark_all_read(request):
     
     messages.success(request, 'Todas as notificações foram marcadas como lidas.')
     return redirect('dashboard:notifications')
+
+
+@login_required
+def notifications_count(request):
+    """
+    Retorna o número de notificações não lidas via AJAX
+    """
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        count = Notification.objects.filter(
+            user=request.user,
+            is_read=False
+        ).count()
+        
+        return JsonResponse({
+            'success': True,
+            'count': count
+        })
+    
+    return JsonResponse({'success': False, 'error': 'Requisição inválida'})

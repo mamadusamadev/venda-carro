@@ -67,6 +67,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'dashboard.context_processors.notifications_count',
             ],
         },
     },
@@ -154,3 +155,16 @@ AUTHENTICATION_BACKENDS = [
 LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Configurações de Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'mamadusama19@gmail.com'
+EMAIL_HOST_PASSWORD = 'spgi jvpi bnsv udtc'
+DEFAULT_FROM_EMAIL = 'CarZone <mamadusama19@gmail.com>'
+SERVER_EMAIL = 'mamadusama19@gmail.com'
+
+# URL base do site (para links nos emails)
+SITE_URL = 'http://127.0.0.1:8000'

@@ -171,6 +171,46 @@
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
 
+        /* Estilos para notificações */
+        .notification-badge {
+            animation: pulse-notification 2s infinite;
+        }
+
+        @keyframes pulse-notification {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .notification-icon {
+            color: #6c757d;
+            transition: color 0.3s ease;
+        }
+
+        .notification-icon:hover {
+            color: var(--primary-color);
+        }
+
+        .notification-icon.has-notifications {
+            color: var(--warning-color);
+        }
+
+        /* Badge de notificação na sidebar */
+        .sidebar .badge {
+            font-size: 0.7em;
+            min-width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 margin-left: -250px;
@@ -255,7 +295,11 @@
                     <a class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}" href="{% url 'dashboard:notifications' %}">
                         <i class="fas fa-bell me-2"></i>
                         Notificações
-                        <span class="badge bg-danger ms-1" id="notification-count" style="display: none;"></span>
+                        {% if unread_notifications_count > 0 %}
+                            <span class="badge bg-danger ms-1 notification-badge" id="notification-count">{{ unread_notifications_count }}</span>
+                        {% else %}
+                            <span class="badge bg-danger ms-1" id="notification-count" style="display: none;"></span>
+                        {% endif %}
                     </a>
                 </li>
                 
@@ -304,6 +348,17 @@
             </div>
             
             <div class="d-flex align-items-center">
+                <!-- Notificações na Navbar -->
+                <a href="{% url 'dashboard:notifications' %}" class="btn btn-link position-relative me-3" title="Notificações">
+                    <i class="fas fa-bell fs-5 notification-icon {% if unread_notifications_count > 0 %}has-notifications{% endif %}"></i>
+                    {% if unread_notifications_count > 0 %}
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                            {{ unread_notifications_count }}
+                            <span class="visually-hidden">notificações não lidas</span>
+                        </span>
+                    {% endif %}
+                </a>
+                
                 <div class="dropdown">
                     <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle me-2"></i>
@@ -342,6 +397,72 @@
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('show');
         }
+
+        // Função para atualizar contador de notificações
+        function updateNotificationCount(newCount) {
+            const sidebarBadge = document.getElementById('notification-count');
+            const navbarBadge = document.querySelector('.notification-badge');
+            const bellIcon = document.querySelector('.notification-icon');
+            
+            if (newCount > 0) {
+                // Mostrar badges com o novo contador
+                if (sidebarBadge) {
+                    sidebarBadge.textContent = newCount;
+                    sidebarBadge.style.display = 'inline';
+                    sidebarBadge.classList.add('notification-badge');
+                }
+                
+                if (navbarBadge) {
+                    navbarBadge.textContent = newCount;
+                    navbarBadge.style.display = 'inline';
+                }
+                
+                if (bellIcon) {
+                    bellIcon.classList.add('has-notifications');
+                }
+            } else {
+                // Ocultar badges quando não há notificações
+                if (sidebarBadge) {
+                    sidebarBadge.style.display = 'none';
+                    sidebarBadge.classList.remove('notification-badge');
+                }
+                
+                if (navbarBadge) {
+                    navbarBadge.style.display = 'none';
+                }
+                
+                if (bellIcon) {
+                    bellIcon.classList.remove('has-notifications');
+                }
+            }
+        }
+
+        // Verificar periodicamente por novas notificações
+        function checkForNewNotifications() {
+            fetch('/dashboard/notificacoes/count/', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const currentCount = parseInt(document.getElementById('notification-count')?.textContent || '0');
+                    if (data.count !== currentCount) {
+                        updateNotificationCount(data.count);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao verificar notificações:', error);
+            });
+        }
+
+        // Verificar notificações a cada 30 segundos
+        document.addEventListener('DOMContentLoaded', function() {
+            setInterval(checkForNewNotifications, 30000);
+        });
         
 
         
