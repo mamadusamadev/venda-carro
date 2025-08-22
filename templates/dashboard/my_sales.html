@@ -1,0 +1,352 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Minhas Vendas - CarZone{% endblock %}
+{% block page_title %}Minhas Vendas{% endblock %}
+
+{% block content %}
+<!-- Estatísticas Resumidas -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-success mb-2">
+                    <i class="fas fa-handshake"></i>
+                </div>
+                <h4>{{ sales|length }}</h4>
+                <p class="text-muted mb-0">Vendas Diretas</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-warning mb-2">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <h4>{{ purchase_requests|length }}</h4>
+                <p class="text-muted mb-0">Solicitações</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-primary mb-2">
+                    <i class="fas fa-euro-sign"></i>
+                </div>
+                <h4>€{% widthratio sales.0.purchase_price 1 sales|length %}</h4>
+                <p class="text-muted mb-0">Valor Total</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-info mb-2">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <a href="{% url 'dashboard:statistics' %}" class="btn btn-info btn-sm mt-2">
+                    Ver Estatísticas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Navegação por Abas -->
+<ul class="nav nav-tabs mb-4" id="salesTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'sales' %}active{% endif %}" id="sales-tab" data-bs-toggle="tab" data-bs-target="#sales" type="button" role="tab">
+            <i class="fas fa-shopping-cart me-2"></i>Vendas Diretas ({{ sales|length }})
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'requests' %}active{% endif %}" id="requests-tab" data-bs-toggle="tab" data-bs-target="#requests" type="button" role="tab">
+            <i class="fas fa-handshake me-2"></i>Solicitações Recebidas ({{ purchase_requests|length }})
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content" id="salesTabContent">
+    <!-- Vendas Diretas -->
+    <div class="tab-pane fade {% if active_tab == 'sales' %}show active{% endif %}" id="sales" role="tabpanel">
+        {% if sales %}
+            {% for sale in sales %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            {% if sale.car.get_main_photo %}
+                                <img src="{{ sale.car.get_main_photo.photo.url }}" class="img-fluid rounded" alt="{{ sale.car.title }}">
+                            {% else %}
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 120px;">
+                                    <i class="fas fa-car fs-2 text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="card-title">{{ sale.car.brand.name }} {{ sale.car.car_model.name }}</h5>
+                            <p class="text-muted mb-2">{{ sale.car.version }} • {{ sale.car.year }}</p>
+                            
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <strong>Valor:</strong> €{{ sale.purchase_price|floatformat:0 }}
+                                </div>
+                                <div class="col-6">
+                                    <strong>Data:</strong> {{ sale.created_at|date:"d/m/Y" }}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Comprador:</strong> {{ sale.buyer_name }}
+                                </div>
+                                <div class="col-6">
+                                    <strong>Pagamento:</strong> 
+                                    <span class="badge bg-{% if sale.payment_status == 'completed' %}success{% elif sale.payment_status == 'pending' %}warning{% else %}danger{% endif %}">
+                                        {{ sale.get_payment_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <span class="badge bg-{% if sale.status == 'pending_payment' %}warning{% elif sale.status == 'completed' %}success{% elif sale.status == 'cancelled' %}danger{% else %}primary{% endif %} mb-3">
+                                {{ sale.get_status_display }}
+                            </span>
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'dashboard:purchase_detail' sale.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye me-2"></i>Ver Detalhes
+                                </a>
+                                
+                                {% if sale.status != 'completed' and sale.status != 'cancelled' %}
+                                <a href="{% url 'dashboard:purchase_status_update' sale.id %}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-edit me-2"></i>Atualizar Status
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Paginação -->
+            {% if sales.has_other_pages %}
+            <nav aria-label="Paginação das vendas">
+                <ul class="pagination justify-content-center">
+                    {% if sales.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?sales_page=1&tab=sales">Primeira</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?sales_page={{ sales.previous_page_number }}&tab=sales">Anterior</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in sales.paginator.page_range %}
+                        {% if sales.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > sales.number|add:'-3' and num < sales.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?sales_page={{ num }}&tab=sales">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if sales.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?sales_page={{ sales.next_page_number }}&tab=sales">Próxima</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?sales_page={{ sales.paginator.num_pages }}&tab=sales">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-shopping-cart fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">Ainda não tem vendas diretas</h5>
+                <p class="text-muted">Quando alguém comprar os seus carros, aparecerão aqui!</p>
+                <a href="{% url 'dashboard:my_cars' %}" class="btn btn-primary">
+                    <i class="fas fa-car me-2"></i>
+                    Ver Meus Carros
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Solicitações Recebidas -->
+    <div class="tab-pane fade {% if active_tab == 'requests' %}show active{% endif %}" id="requests" role="tabpanel">
+        {% if purchase_requests %}
+            {% for request in purchase_requests %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            {% if request.car.get_main_photo %}
+                                <img src="{{ request.car.get_main_photo.photo.url }}" class="img-fluid rounded" alt="{{ request.car.title }}">
+                            {% else %}
+                                <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 120px;">
+                                    <i class="fas fa-car fs-2 text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="card-title">{{ request.car.brand.name }} {{ request.car.car_model.name }}</h5>
+                            <p class="text-muted mb-2">{{ request.car.version }} • {{ request.car.year }}</p>
+                            
+                            <div class="row mb-2">
+                                <div class="col-6">
+                                    <strong>Preço Anunciado:</strong> €{{ request.car.price|floatformat:0 }}
+                                    {% if request.proposed_price %}
+                                        <br><strong>Preço Proposto:</strong> €{{ request.proposed_price|floatformat:0 }}
+                                    {% endif %}
+                                </div>
+                                <div class="col-6">
+                                    <strong>Data:</strong> {{ request.created_at|date:"d/m/Y" }}
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>Comprador:</strong> {{ request.buyer_name }}
+                                </div>
+                                <div class="col-6">
+                                    <strong>Telefone:</strong> {{ request.buyer_phone }}
+                                </div>
+                            </div>
+                            
+                            <div class="mt-2">
+                                <strong>Mensagem:</strong><br>
+                                <small class="text-muted">{{ request.message|truncatewords:15 }}</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-end">
+                            <span class="badge bg-{% if request.status == 'pending' %}warning{% elif request.status == 'accepted' %}success{% elif request.status == 'rejected' %}danger{% else %}info{% endif %} mb-3">
+                                {{ request.get_status_display }}
+                            </span>
+                            
+                            {% if request.status == 'pending' %}
+                                <div class="alert alert-warning p-2 mb-2">
+                                    <small><i class="fas fa-clock me-1"></i>Aguarda resposta</small>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'dashboard:purchase_request_detail' request.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye me-2"></i>Ver Detalhes
+                                </a>
+                                
+                                {% if request.status == 'pending' %}
+                                <a href="{% url 'dashboard:purchase_request_detail' request.id %}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-reply me-2"></i>Responder
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Paginação -->
+            {% if purchase_requests.has_other_pages %}
+            <nav aria-label="Paginação das solicitações">
+                <ul class="pagination justify-content-center">
+                    {% if purchase_requests.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?request_page=1&tab=requests">Primeira</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?request_page={{ purchase_requests.previous_page_number }}&tab=requests">Anterior</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in purchase_requests.paginator.page_range %}
+                        {% if purchase_requests.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > purchase_requests.number|add:'-3' and num < purchase_requests.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?request_page={{ num }}&tab=requests">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if purchase_requests.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?request_page={{ purchase_requests.next_page_number }}&tab=requests">Próxima</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?request_page={{ purchase_requests.paginator.num_pages }}&tab=requests">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-handshake fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">Ainda não recebeu solicitações</h5>
+                <p class="text-muted">Quando alguém se interessar pelos seus carros, as solicitações aparecerão aqui!</p>
+                <a href="{% url 'dashboard:car_add' %}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>
+                    Adicionar Carro
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manter aba ativa baseada no parâmetro da URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const activeTab = urlParams.get('tab') || 'sales';
+    
+    const tabButton = document.getElementById(activeTab + '-tab');
+    const tabContent = document.getElementById(activeTab);
+    
+    if (tabButton && tabContent) {
+        // Remover active de todas as abas
+        document.querySelectorAll('.nav-link').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(pane => {
+            pane.classList.remove('show', 'active');
+        });
+        
+        // Ativar aba selecionada
+        tabButton.classList.add('active');
+        tabContent.classList.add('show', 'active');
+    }
+    
+    // Atualizar URL quando mudar de aba
+    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', function(e) {
+            const tabId = e.target.getAttribute('data-bs-target').replace('#', '');
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tabId);
+            window.history.replaceState(null, '', url);
+        });
+    });
+    
+    // Destacar solicitações pendentes
+    const pendingRequests = document.querySelectorAll('.badge.bg-warning');
+    pendingRequests.forEach(badge => {
+        if (badge.textContent.trim() === 'Pendente') {
+            badge.parentElement.parentElement.style.border = '2px solid #ffc107';
+        }
+    });
+});
+</script>
+{% endblock %}

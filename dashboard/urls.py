@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_purchase
 
 app_name = 'dashboard'
 
@@ -27,4 +28,20 @@ urlpatterns = [
     
     # Alterar status do carro
     path('carros/<uuid:car_id>/alterar-status/', views.change_car_status, name='change_car_status'),
+    
+    # Sistema de compras
+    path('carros/<uuid:car_id>/solicitar-compra/', views_purchase.purchase_request_create, name='purchase_request_create'),
+    path('carros/<uuid:car_id>/comprar/', views_purchase.purchase_create, name='purchase_create'),
+    path('solicitacoes/<uuid:request_id>/', views_purchase.purchase_request_detail, name='purchase_request_detail'),
+    path('compras/<uuid:purchase_id>/', views_purchase.purchase_detail, name='purchase_detail'),
+    path('compras/<uuid:purchase_id>/alterar-status/', views_purchase.purchase_status_update, name='purchase_status_update'),
+    
+    # Gestão de compras e vendas
+    path('minhas-compras/', views_purchase.my_purchases, name='my_purchases'),
+    path('minhas-vendas/', views_purchase.my_sales, name='my_sales'),
+    
+    # Notificações
+    path('notificacoes/', views_purchase.notifications_list, name='notifications'),
+    path('notificacoes/<uuid:notification_id>/ler/', views_purchase.notification_mark_read, name='notification_mark_read'),
+    path('notificacoes/marcar-todas-lidas/', views_purchase.notifications_mark_all_read, name='notifications_mark_all_read'),
 ] 

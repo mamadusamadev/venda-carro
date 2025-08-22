@@ -1,0 +1,342 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Detalhes da Compra - CarZone{% endblock %}
+{% block page_title %}Detalhes da Compra{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Informações da Compra -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shopping-cart me-2"></i>Compra #{{ purchase.id|slice:":8" }}
+                </h5>
+                <span class="badge bg-{% if purchase.status == 'pending_payment' %}warning{% elif purchase.status == 'payment_confirmed' %}info{% elif purchase.status == 'delivered' %}success{% elif purchase.status == 'completed' %}success{% elif purchase.status == 'cancelled' %}danger{% else %}primary{% endif %} fs-6">
+                    {{ purchase.get_status_display }}
+                </span>
+            </div>
+            <div class="card-body">
+                <!-- Informações do Carro -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        {% if purchase.car.get_main_photo %}
+                            <img src="{{ purchase.car.get_main_photo.photo.url }}" class="img-fluid rounded" alt="{{ purchase.car.title }}">
+                        {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-car fs-1 text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <h4>{{ purchase.car.brand.name }} {{ purchase.car.car_model.name }}</h4>
+                        <p class="text-muted">{{ purchase.car.version }} • {{ purchase.car.year }} • {{ purchase.car.mileage|floatformat:0 }} km</p>
+                        
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong>Preço da Compra:</strong><br>
+                                <span class="text-success fs-4">€{{ purchase.purchase_price|floatformat:0 }}</span>
+                            </div>
+                            <div class="col-6">
+                                <strong>Vendedor:</strong> {{ purchase.car.seller.get_full_name|default:purchase.car.seller.username }}<br>
+                                <strong>Comprador:</strong> {{ purchase.buyer_name }}
+                            </div>
+                        </div>
+                        
+                        <a href="{% url 'dashboard:car_detail' purchase.car.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-2"></i>Ver Carro
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Timeline de Status -->
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-history me-2"></i>Histórico da Compra
+                </h6>
+                
+                <div class="timeline">
+                    {% for history in status_history %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-{% if history.new_status == 'completed' %}success{% elif history.new_status == 'cancelled' %}danger{% else %}primary{% endif %}"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">{{ history.get_new_status_display }}</h6>
+                            <p class="text-muted mb-1">{{ history.created_at|date:"d/m/Y H:i" }}</p>
+                            {% if history.notes %}
+                                <p class="mb-0"><small>{{ history.notes }}</small></p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Compra Criada</h6>
+                            <p class="text-muted mb-0">{{ purchase.created_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Dados de Entrega -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-map-marker-alt me-2"></i>Dados de Entrega
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Nome:</strong> {{ purchase.buyer_name }}<br>
+                        <strong>Email:</strong> {{ purchase.buyer_email }}<br>
+                        <strong>Telefone:</strong> {{ purchase.buyer_phone }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Cidade:</strong> {{ purchase.buyer_city }}<br>
+                        <strong>Código Postal:</strong> {{ purchase.buyer_postal_code }}
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <strong>Morada de Entrega:</strong><br>
+                    {{ purchase.buyer_address }}
+                </div>
+
+                {% if purchase.notes %}
+                <div class="mt-3">
+                    <strong>Notas Adicionais:</strong><br>
+                    {{ purchase.notes|linebreaks }}
+                </div>
+                {% endif %}
+
+                {% if purchase.tracking_code %}
+                <div class="mt-3">
+                    <strong>Código de Rastreamento:</strong><br>
+                    <span class="badge bg-info">{{ purchase.tracking_code }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Formulário de Atualização de Status (apenas para vendedor) -->
+        {% if is_seller and purchase.status != 'completed' and purchase.status != 'cancelled' %}
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-edit me-2"></i>Atualizar Status
+                </h6>
+            </div>
+            <div class="card-body">
+                <a href="{% url 'dashboard:purchase_status_update' purchase.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Alterar Status
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Resumo da Compra -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-receipt me-2"></i>Resumo
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>Data da Compra:</strong><br>
+                    <small>{{ purchase.created_at|date:"d/m/Y H:i" }}</small>
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Status Atual:</strong><br>
+                    <span class="badge bg-{% if purchase.status == 'pending_payment' %}warning{% elif purchase.status == 'payment_confirmed' %}info{% elif purchase.status == 'delivered' %}success{% elif purchase.status == 'completed' %}success{% elif purchase.status == 'cancelled' %}danger{% else %}primary{% endif %}">
+                        {{ purchase.get_status_display }}
+                    </span>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Status do Pagamento:</strong><br>
+                    <span class="badge bg-{% if purchase.payment_status == 'completed' %}success{% elif purchase.payment_status == 'pending' %}warning{% elif purchase.payment_status == 'failed' %}danger{% else %}info{% endif %}">
+                        {{ purchase.get_payment_status_display }}
+                    </span>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <strong>Valor Total:</strong><br>
+                    <span class="text-success fs-4">€{{ purchase.purchase_price|floatformat:0 }}</span>
+                </div>
+
+                {% if purchase.payment_confirmed_at %}
+                <div class="mb-3">
+                    <strong>Pagamento Confirmado:</strong><br>
+                    <small>{{ purchase.payment_confirmed_at|date:"d/m/Y H:i" }}</small>
+                </div>
+                {% endif %}
+
+                {% if purchase.delivered_at %}
+                <div class="mb-3">
+                    <strong>Data de Entrega:</strong><br>
+                    <small>{{ purchase.delivered_at|date:"d/m/Y H:i" }}</small>
+                </div>
+                {% endif %}
+
+                {% if purchase.completed_at %}
+                <div class="mb-3">
+                    <strong>Compra Concluída:</strong><br>
+                    <small>{{ purchase.completed_at|date:"d/m/Y H:i" }}</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Próximos Passos -->
+        {% if purchase.status != 'completed' and purchase.status != 'cancelled' %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-tasks me-2"></i>Próximos Passos
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if purchase.status == 'pending_payment' %}
+                    {% if is_buyer %}
+                        <p>Aguardamos a confirmação do seu pagamento. Você receberá uma notificação assim que for processado.</p>
+                    {% else %}
+                        <p>Aguardando confirmação do pagamento do comprador.</p>
+                    {% endif %}
+                {% elif purchase.status == 'payment_confirmed' %}
+                    {% if is_seller %}
+                        <p>Pagamento confirmado! Prepare o carro para entrega.</p>
+                    {% else %}
+                        <p>Pagamento confirmado! O vendedor está a preparar o carro para entrega.</p>
+                    {% endif %}
+                {% elif purchase.status == 'preparing_delivery' %}
+                    <p>Carro está a ser preparado para entrega.</p>
+                {% elif purchase.status == 'in_transit' %}
+                    <p>Carro está a caminho do destino.</p>
+                {% elif purchase.status == 'delivered' %}
+                    {% if is_buyer %}
+                        <p>Carro entregue! Confirme a receção para concluir a compra.</p>
+                    {% else %}
+                        <p>Carro entregue. Aguardando confirmação do comprador.</p>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Ações -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-cogs me-2"></i>Ações
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if is_buyer %}
+                    <a href="{% url 'dashboard:my_purchases' %}" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fas fa-shopping-bag me-2"></i>Minhas Compras
+                    </a>
+                    
+                    {% if purchase.status == 'delivered' %}
+                    <button class="btn btn-success w-100" onclick="confirmDelivery()">
+                        <i class="fas fa-check me-2"></i>Confirmar Receção
+                    </button>
+                    {% endif %}
+                {% endif %}
+
+                {% if is_seller %}
+                    <a href="{% url 'dashboard:my_sales' %}" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fas fa-handshake me-2"></i>Minhas Vendas
+                    </a>
+                    
+                    {% if purchase.status != 'completed' and purchase.status != 'cancelled' %}
+                    <a href="{% url 'dashboard:purchase_status_update' purchase.id %}" class="btn btn-primary w-100">
+                        <i class="fas fa-edit me-2"></i>Atualizar Status
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Aviso de Segurança -->
+        <div class="card mt-4">
+            <div class="card-body">
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Nota:</strong> O dinheiro só será transferido para o vendedor após a confirmação da receção pelo comprador.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #dee2e6;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -23px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 2px #dee2e6;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-left: 10px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelivery() {
+    if (confirm('Confirma que recebeu o carro em boas condições?')) {
+        // Aqui seria feita a requisição AJAX para confirmar a entrega
+        // Por enquanto, vamos redirecionar para a página de atualização de status
+        alert('Funcionalidade será implementada em breve!');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh para compras ativas
+    {% if purchase.status != 'completed' and purchase.status != 'cancelled' %}
+    setInterval(function() {
+        location.reload();
+    }, 60000); // Refresh a cada minuto
+    {% endif %}
+});
+</script>
+{% endblock %}

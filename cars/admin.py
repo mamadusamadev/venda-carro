@@ -265,3 +265,96 @@ class CarAlertAdmin(admin.ModelAdmin):
             'fields': ('created_at', 'updated_at')
         }),
     )
+
+
+# Registar modelos de compra
+from .models_purchase import PurchaseRequest, Purchase, PurchaseStatusHistory, Notification
+
+
+@admin.register(PurchaseRequest)
+class PurchaseRequestAdmin(admin.ModelAdmin):
+    list_display = ('buyer_name', 'car', 'seller', 'status', 'proposed_price', 'created_at')
+    list_filter = ('status', 'created_at', 'seller')
+    search_fields = ('buyer_name', 'buyer_email', 'car__title', 'seller__username')
+    readonly_fields = ('created_at', 'updated_at')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('car', 'buyer', 'seller', 'status')
+        }),
+        ('Dados do Comprador', {
+            'fields': ('buyer_name', 'buyer_email', 'buyer_phone', 'buyer_address', 'buyer_city', 'buyer_postal_code')
+        }),
+        ('Proposta', {
+            'fields': ('proposed_price', 'message')
+        }),
+        ('Resposta do Vendedor', {
+            'fields': ('seller_response', 'seller_responded_at')
+        }),
+        ('Datas', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(Purchase)
+class PurchaseAdmin(admin.ModelAdmin):
+    list_display = ('buyer_name', 'car', 'seller', 'purchase_price', 'status', 'payment_status', 'created_at')
+    list_filter = ('status', 'payment_status', 'created_at', 'seller')
+    search_fields = ('buyer_name', 'buyer_email', 'car__title', 'seller__username', 'transaction_id')
+    readonly_fields = ('created_at', 'updated_at', 'payment_confirmed_at', 'delivered_at', 'completed_at')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('car', 'buyer', 'seller', 'purchase_price')
+        }),
+        ('Dados do Comprador', {
+            'fields': ('buyer_name', 'buyer_email', 'buyer_phone', 'buyer_address', 'buyer_city', 'buyer_postal_code')
+        }),
+        ('Status', {
+            'fields': ('status', 'payment_status')
+        }),
+        ('Pagamento', {
+            'fields': ('payment_method', 'transaction_id', 'payment_confirmed_at')
+        }),
+        ('Entrega', {
+            'fields': ('tracking_code', 'delivered_at')
+        }),
+        ('Notas', {
+            'fields': ('notes',)
+        }),
+        ('Datas', {
+            'fields': ('created_at', 'updated_at', 'completed_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(PurchaseStatusHistory)
+class PurchaseStatusHistoryAdmin(admin.ModelAdmin):
+    list_display = ('purchase', 'previous_status', 'new_status', 'changed_by', 'created_at')
+    list_filter = ('previous_status', 'new_status', 'created_at')
+    search_fields = ('purchase__buyer_name', 'purchase__car__title', 'changed_by__username')
+    readonly_fields = ('created_at',)
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ('title', 'user', 'type', 'is_read', 'created_at')
+    list_filter = ('type', 'is_read', 'created_at')
+    search_fields = ('title', 'message', 'user__username')
+    readonly_fields = ('created_at', 'read_at')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('user', 'type', 'title', 'message')
+        }),
+        ('Referências', {
+            'fields': ('purchase_request', 'purchase', 'car'),
+            'classes': ('collapse',)
+        }),
+        ('Status', {
+            'fields': ('is_read', 'created_at', 'read_at')
+        })
+    )

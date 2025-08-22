@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Solicitação de Compra - CarZone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #2c3e50, #34495e);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .car-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }
+        .buyer-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 CarZone</h1>
+        <h2>Nova Solicitação de Compra</h2>
+    </div>
+    
+    <div class="content">
+        <p>Olá <strong>{{ seller.get_full_name|default:seller.username }}</strong>,</p>
+        
+        <p>Tem uma nova solicitação de compra para o seu carro!</p>
+        
+        <div class="car-info">
+            <h3>🚗 Carro Solicitado</h3>
+            <p><strong>{{ car.brand.name }} {{ car.car_model.name }}</strong></p>
+            <p>{{ car.version }} • {{ car.year }} • {{ car.mileage|floatformat:0 }} km</p>
+            <p><strong>Preço anunciado:</strong> €{{ car.price|floatformat:0 }}</p>
+            {% if purchase_request.proposed_price %}
+                <p><strong>Preço proposto:</strong> €{{ purchase_request.proposed_price|floatformat:0 }}</p>
+            {% endif %}
+        </div>
+        
+        <div class="buyer-info">
+            <h3>👤 Dados do Comprador</h3>
+            <p><strong>Nome:</strong> {{ purchase_request.buyer_name }}</p>
+            <p><strong>Email:</strong> {{ purchase_request.buyer_email }}</p>
+            <p><strong>Telefone:</strong> {{ purchase_request.buyer_phone }}</p>
+            <p><strong>Cidade:</strong> {{ purchase_request.buyer_city }}</p>
+            
+            <h4>💬 Mensagem:</h4>
+            <p style="font-style: italic; background: #f1f3f4; padding: 15px; border-radius: 5px;">
+                "{{ purchase_request.message }}"
+            </p>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="{{ site_url }}dashboard/solicitacoes/{{ purchase_request.id }}/" class="button">
+                📋 Ver Solicitação Completa
+            </a>
+        </div>
+        
+        <div class="warning">
+            <strong>⚠️ Importante:</strong> Nunca aceite pagamentos fora da plataforma CarZone. 
+            Use sempre os nossos sistemas seguros para processar vendas.
+        </div>
+        
+        <p>Para responder a esta solicitação, acesse o seu dashboard no CarZone.</p>
+        
+        <p>Cumprimentos,<br>
+        <strong>Equipa CarZone</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>Este email foi enviado automaticamente. Por favor, não responda diretamente.</p>
+        <p>© {{ "now"|date:"Y" }} CarZone - Todos os direitos reservados</p>
+    </div>
+</body>
+</html>

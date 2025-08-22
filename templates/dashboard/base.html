@@ -228,7 +228,21 @@
                     </a>
                 </li>
                 
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'my_purchases' %}active{% endif %}" href="{% url 'dashboard:my_purchases' %}">
+                        <i class="fas fa-shopping-bag me-2"></i>
+                        Minhas Compras
+                    </a>
+                </li>
+                
                 {% if user.user_type == 'seller' or user.is_staff or user.is_superuser %}
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'my_sales' %}active{% endif %}" href="{% url 'dashboard:my_sales' %}">
+                        <i class="fas fa-handshake me-2"></i>
+                        Minhas Vendas
+                    </a>
+                </li>
+                
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'car_add' %}active{% endif %}" href="{% url 'dashboard:car_add' %}">
                         <i class="fas fa-plus-circle me-2"></i>
@@ -236,6 +250,14 @@
                     </a>
                 </li>
                 {% endif %}
+                
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}" href="{% url 'dashboard:notifications' %}">
+                        <i class="fas fa-bell me-2"></i>
+                        Notificações
+                        <span class="badge bg-danger ms-1" id="notification-count" style="display: none;"></span>
+                    </a>
+                </li>
                 
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'statistics' %}active{% endif %}" href="{% url 'dashboard:statistics' %}">

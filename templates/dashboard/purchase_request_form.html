@@ -1,0 +1,236 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ form_title }} - CarZone{% endblock %}
+{% block page_title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Informações do Carro -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-car me-2"></i>Carro Selecionado
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        {% if car.get_main_photo %}
+                            <img src="{{ car.get_main_photo.photo.url }}" class="img-fluid rounded" alt="{{ car.title }}">
+                        {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-car fs-1 text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <h4>{{ car.brand.name }} {{ car.car_model.name }}</h4>
+                        <p class="text-muted">{{ car.version }} • {{ car.year }} • {{ car.mileage|floatformat:0 }} km</p>
+                        
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong>Preço:</strong> €{{ car.price|floatformat:0 }}
+                                {% if car.negotiable %}<small class="text-muted">(Negociável)</small>{% endif %}
+                            </div>
+                            <div class="col-6">
+                                <strong>Vendedor:</strong> {{ car.seller.get_full_name|default:car.seller.username }}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Combustível:</strong> {{ car.get_fuel_type_display }}
+                            </div>
+                            <div class="col-6">
+                                <strong>Transmissão:</strong> {{ car.get_transmission_display }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-handshake me-2"></i>{{ form_title }}
+                </h5>
+                <p class="text-muted mb-0">{{ form_description }}</p>
+            </div>
+            <div class="card-body">
+                <!-- Aviso de Segurança -->
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Importante:</strong> Esta é uma solicitação de compra. O vendedor irá analisar e responder. 
+                    <strong>NUNCA faça pagamentos fora da plataforma!</strong>
+                </div>
+
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.buyer_name.id_for_label }}" class="form-label">{{ form.buyer_name.label }} *</label>
+                            {{ form.buyer_name }}
+                            {% if form.buyer_name.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.buyer_email.id_for_label }}" class="form-label">{{ form.buyer_email.label }} *</label>
+                            {{ form.buyer_email }}
+                            {% if form.buyer_email.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_email.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.buyer_phone.id_for_label }}" class="form-label">{{ form.buyer_phone.label }} *</label>
+                            {{ form.buyer_phone }}
+                            {% if form.buyer_phone.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_phone.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.buyer_postal_code.id_for_label }}" class="form-label">{{ form.buyer_postal_code.label }} *</label>
+                            {{ form.buyer_postal_code }}
+                            {% if form.buyer_postal_code.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_postal_code.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.buyer_city.id_for_label }}" class="form-label">{{ form.buyer_city.label }} *</label>
+                            {{ form.buyer_city }}
+                            {% if form.buyer_city.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_city.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.proposed_price.id_for_label }}" class="form-label">{{ form.proposed_price.label }}</label>
+                            <div class="input-group">
+                                <span class="input-group-text">€</span>
+                                {{ form.proposed_price }}
+                            </div>
+                            <small class="form-text text-muted">{{ form.proposed_price.help_text }}</small>
+                            {% if form.proposed_price.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.proposed_price.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.buyer_address.id_for_label }}" class="form-label">{{ form.buyer_address.label }} *</label>
+                        {{ form.buyer_address }}
+                        {% if form.buyer_address.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.buyer_address.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.message.id_for_label }}" class="form-label">{{ form.message.label }} *</label>
+                        {{ form.message }}
+                        <small class="form-text text-muted">{{ form.message.help_text }}</small>
+                        {% if form.message.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.message.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dashboard:car_detail' car.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-paper-plane me-2"></i>Enviar Solicitação
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Formatação automática do telefone
+    const phoneInput = document.getElementById('{{ form.buyer_phone.id_for_label }}');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                if (value.startsWith('351')) {
+                    value = '+' + value;
+                } else if (!value.startsWith('+')) {
+                    value = '+351' + value;
+                }
+            }
+            e.target.value = value;
+        });
+    }
+    
+    // Formatação do código postal
+    const postalInput = document.getElementById('{{ form.buyer_postal_code.id_for_label }}');
+    if (postalInput) {
+        postalInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 4) {
+                value = value.substring(0, 4) + '-' + value.substring(4, 7);
+            }
+            e.target.value = value;
+        });
+    }
+    
+    // Formatação do preço
+    const priceInput = document.getElementById('{{ form.proposed_price.id_for_label }}');
+    if (priceInput) {
+        priceInput.addEventListener('input', function(e) {
+            let value = parseFloat(e.target.value);
+            if (isNaN(value) || value < 0) {
+                e.target.value = '';
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,326 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Notificações - CarZone{% endblock %}
+{% block page_title %}Notificações{% endblock %}
+
+{% block content %}
+<!-- Cabeçalho com ações -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="mb-1">Suas Notificações</h4>
+        <p class="text-muted mb-0">
+            {% if unread_count > 0 %}
+                Você tem {{ unread_count }} notificação{{ unread_count|pluralize:"ões" }} não lida{{ unread_count|pluralize:"s" }}
+            {% else %}
+                Todas as notificações foram lidas
+            {% endif %}
+        </p>
+    </div>
+    
+    {% if unread_count > 0 %}
+    <a href="{% url 'dashboard:notifications_mark_all_read' %}" class="btn btn-outline-primary">
+        <i class="fas fa-check-double me-2"></i>Marcar Todas como Lidas
+    </a>
+    {% endif %}
+</div>
+
+<!-- Lista de Notificações -->
+{% if notifications %}
+    <div class="list-group">
+        {% for notification in notifications %}
+        <div class="list-group-item {% if not notification.is_read %}list-group-item-warning{% endif %} notification-item" data-id="{{ notification.id }}">
+            <div class="d-flex w-100 justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="notification-icon me-3">
+                            {% if notification.type == 'purchase_request' %}
+                                <i class="fas fa-handshake text-primary fs-4"></i>
+                            {% elif notification.type == 'purchase_created' %}
+                                <i class="fas fa-shopping-cart text-success fs-4"></i>
+                            {% elif notification.type == 'status_changed' %}
+                                <i class="fas fa-sync-alt text-info fs-4"></i>
+                            {% elif notification.type == 'payment_confirmed' %}
+                                <i class="fas fa-credit-card text-success fs-4"></i>
+                            {% elif notification.type == 'delivery_confirmed' %}
+                                <i class="fas fa-truck text-warning fs-4"></i>
+                            {% else %}
+                                <i class="fas fa-bell text-secondary fs-4"></i>
+                            {% endif %}
+                        </div>
+                        
+                        <div>
+                            <h6 class="mb-1">{{ notification.title }}</h6>
+                            <p class="mb-1">{{ notification.message }}</p>
+                            
+                            <small class="text-muted">
+                                <i class="fas fa-clock me-1"></i>{{ notification.created_at|date:"d/m/Y H:i" }}
+                                {% if not notification.is_read %}
+                                    <span class="badge bg-primary ms-2">Nova</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="notification-actions">
+                    {% if not notification.is_read %}
+                    <button class="btn btn-sm btn-outline-primary me-2" onclick="markAsRead('{{ notification.id }}')">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    {% endif %}
+                    
+                    <!-- Links para ações relacionadas -->
+                    {% if notification.purchase_request %}
+                        <a href="{% url 'dashboard:purchase_request_detail' notification.purchase_request.id %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye me-1"></i>Ver Solicitação
+                        </a>
+                    {% elif notification.purchase %}
+                        <a href="{% url 'dashboard:purchase_detail' notification.purchase.id %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye me-1"></i>Ver Compra
+                        </a>
+                    {% elif notification.car %}
+                        <a href="{% url 'dashboard:car_detail' notification.car.id %}" class="btn btn-sm btn-primary">
+                            <i class="fas fa-eye me-1"></i>Ver Carro
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Paginação -->
+    {% if notifications.has_other_pages %}
+    <nav aria-label="Paginação das notificações" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if notifications.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">Primeira</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notifications.previous_page_number }}">Anterior</a>
+                </li>
+            {% endif %}
+            
+            {% for num in notifications.paginator.page_range %}
+                {% if notifications.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > notifications.number|add:'-3' and num < notifications.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if notifications.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notifications.next_page_number }}">Próxima</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notifications.paginator.num_pages }}">Última</a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-bell-slash fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">Nenhuma notificação</h5>
+        <p class="text-muted">Quando houver atividade nos seus carros ou compras, você será notificado aqui!</p>
+        <a href="{% url 'dashboard:home' %}" class="btn btn-primary">
+            <i class="fas fa-tachometer-alt me-2"></i>
+            Voltar ao Dashboard
+        </a>
+    </div>
+{% endif %}
+
+<!-- Filtros de Notificação (oculto por padrão) -->
+<div class="collapse mt-4" id="notificationFilters">
+    <div class="card">
+        <div class="card-header">
+            <h6 class="card-title mb-0">
+                <i class="fas fa-filter me-2"></i>Filtrar Notificações
+            </h6>
+        </div>
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Tipo</label>
+                    <select name="type" class="form-select">
+                        <option value="">Todos os tipos</option>
+                        <option value="purchase_request">Solicitações de Compra</option>
+                        <option value="purchase_created">Compras Criadas</option>
+                        <option value="status_changed">Status Alterado</option>
+                        <option value="payment_confirmed">Pagamento Confirmado</option>
+                        <option value="delivery_confirmed">Entrega Confirmada</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select name="read" class="form-select">
+                        <option value="">Todas</option>
+                        <option value="false">Não lidas</option>
+                        <option value="true">Lidas</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search me-2"></i>Filtrar
+                        </button>
+                        <a href="{% url 'dashboard:notifications' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Limpar
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Botão para mostrar/ocultar filtros -->
+{% if notifications %}
+<div class="text-center mt-4">
+    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#notificationFilters">
+        <i class="fas fa-filter me-2"></i>Filtros Avançados
+    </button>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.notification-item {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.notification-item.list-group-item-warning {
+    border-left-color: #ffc107;
+    background-color: rgba(255, 193, 7, 0.1);
+}
+
+.notification-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.notification-icon {
+    width: 50px;
+    text-align: center;
+}
+
+.notification-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .notification-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .notification-actions .btn {
+        margin-bottom: 0.25rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markAsRead(notificationId) {
+    fetch(`/dashboard/notificacoes/${notificationId}/ler/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const notificationItem = document.querySelector(`[data-id="${notificationId}"]`);
+            if (notificationItem) {
+                // Remover destaque de não lida
+                notificationItem.classList.remove('list-group-item-warning');
+                
+                // Remover badge "Nova"
+                const newBadge = notificationItem.querySelector('.badge.bg-primary');
+                if (newBadge) {
+                    newBadge.remove();
+                }
+                
+                // Remover botão de marcar como lida
+                const markReadBtn = notificationItem.querySelector('.btn-outline-primary');
+                if (markReadBtn && markReadBtn.innerHTML.includes('fa-check')) {
+                    markReadBtn.remove();
+                }
+                
+                // Atualizar contador na sidebar (se existir)
+                const notificationCount = document.getElementById('notification-count');
+                if (notificationCount) {
+                    let count = parseInt(notificationCount.textContent) || 0;
+                    count = Math.max(0, count - 1);
+                    if (count > 0) {
+                        notificationCount.textContent = count;
+                        notificationCount.style.display = 'inline';
+                    } else {
+                        notificationCount.style.display = 'none';
+                    }
+                }
+            }
+            
+            // Mostrar mensagem de sucesso
+            showToast('Notificação marcada como lida!', 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showToast('Erro ao marcar notificação como lida.', 'error');
+    });
+}
+
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed top-0 end-0 m-3`;
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation-triangle'} me-2"></i>${message}`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-refresh a cada 60 segundos para novas notificações
+    setInterval(function() {
+        // Apenas recarregar se não há muitas notificações para não perder posição
+        if (document.querySelectorAll('.notification-item').length < 10) {
+            location.reload();
+        }
+    }, 60000);
+    
+    // Marcar automaticamente como lida quando clicar em "Ver"
+    document.querySelectorAll('.notification-item .btn-primary').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const notificationItem = this.closest('.notification-item');
+            const notificationId = notificationItem.dataset.id;
+            
+            if (notificationItem.classList.contains('list-group-item-warning')) {
+                markAsRead(notificationId);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

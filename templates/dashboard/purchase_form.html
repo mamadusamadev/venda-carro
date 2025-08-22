@@ -1,0 +1,292 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}{{ form_title }} - CarZone{% endblock %}
+{% block page_title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Informações do Carro -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-car me-2"></i>Carro Selecionado
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        {% if car.get_main_photo %}
+                            <img src="{{ car.get_main_photo.photo.url }}" class="img-fluid rounded" alt="{{ car.title }}">
+                        {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-car fs-1 text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-8">
+                        <h4>{{ car.brand.name }} {{ car.car_model.name }}</h4>
+                        <p class="text-muted">{{ car.version }} • {{ car.year }} • {{ car.mileage|floatformat:0 }} km</p>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h3 class="text-success mb-0">
+                                    <i class="fas fa-euro-sign me-1"></i>{{ car.price|floatformat:0 }}
+                                    {% if car.negotiable %}<small class="text-muted fs-6">(Negociável)</small>{% endif %}
+                                </h3>
+                                <small class="text-muted">Preço final da compra</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Vendedor:</strong> {{ car.seller.get_full_name|default:car.seller.username }}
+                            </div>
+                            <div class="col-6">
+                                <strong>Localização:</strong> {{ car.city }}, {{ car.district }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulário -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-shopping-cart me-2"></i>{{ form_title }}
+                </h5>
+                <p class="text-muted mb-0">{{ form_description }}</p>
+            </div>
+            <div class="card-body">
+                <!-- Avisos de Segurança -->
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-shield-alt me-2"></i>Aviso de Segurança</h6>
+                    <ul class="mb-0">
+                        <li><strong>NUNCA faça pagamentos fora da plataforma!</strong></li>
+                        <li>O pagamento será processado de forma segura através da nossa plataforma</li>
+                        <li>O dinheiro só será transferido para o vendedor após confirmar a receção do carro</li>
+                    </ul>
+                </div>
+
+                <form method="post" id="purchaseForm">
+                    {% csrf_token %}
+                    
+                    <!-- Dados Pessoais -->
+                    <h6 class="text-primary mb-3">
+                        <i class="fas fa-user me-2"></i>Dados Pessoais
+                    </h6>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.buyer_name.id_for_label }}" class="form-label">{{ form.buyer_name.label }} *</label>
+                            {{ form.buyer_name }}
+                            {% if form.buyer_name.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_name.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.buyer_email.id_for_label }}" class="form-label">{{ form.buyer_email.label }} *</label>
+                            {{ form.buyer_email }}
+                            {% if form.buyer_email.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_email.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.buyer_phone.id_for_label }}" class="form-label">{{ form.buyer_phone.label }} *</label>
+                        {{ form.buyer_phone }}
+                        {% if form.buyer_phone.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.buyer_phone.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Morada de Entrega -->
+                    <h6 class="text-primary mb-3 mt-4">
+                        <i class="fas fa-map-marker-alt me-2"></i>Morada de Entrega
+                    </h6>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.buyer_address.id_for_label }}" class="form-label">{{ form.buyer_address.label }} *</label>
+                        {{ form.buyer_address }}
+                        {% if form.buyer_address.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.buyer_address.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label for="{{ form.buyer_city.id_for_label }}" class="form-label">{{ form.buyer_city.label }} *</label>
+                            {{ form.buyer_city }}
+                            {% if form.buyer_city.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_city.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4">
+                            <label for="{{ form.buyer_postal_code.id_for_label }}" class="form-label">{{ form.buyer_postal_code.label }} *</label>
+                            {{ form.buyer_postal_code }}
+                            {% if form.buyer_postal_code.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.buyer_postal_code.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                        {% if form.notes.errors %}
+                            <div class="text-danger mt-1">
+                                {% for error in form.notes.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Termos e Condições -->
+                    <div class="border rounded p-3 mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-file-contract me-2"></i>Termos e Condições
+                        </h6>
+                        
+                        <div class="form-check mb-2">
+                            {{ form.accept_terms }}
+                            <label class="form-check-label" for="{{ form.accept_terms.id_for_label }}">
+                                {{ form.accept_terms.label }} *
+                            </label>
+                            {% if form.accept_terms.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.accept_terms.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-check">
+                            {{ form.payment_security_warning }}
+                            <label class="form-check-label" for="{{ form.payment_security_warning.id_for_label }}">
+                                {{ form.payment_security_warning.label }} *
+                            </label>
+                            {% if form.payment_security_warning.errors %}
+                                <div class="text-danger mt-1">
+                                    {% for error in form.payment_security_warning.errors %}
+                                        <small>{{ error }}</small>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Resumo da Compra -->
+                    <div class="card bg-light mb-4">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-receipt me-2"></i>Resumo da Compra
+                            </h6>
+                            <div class="row">
+                                <div class="col-8">
+                                    <strong>{{ car.brand.name }} {{ car.car_model.name }}</strong><br>
+                                    <small class="text-muted">{{ car.version }} • {{ car.year }}</small>
+                                </div>
+                                <div class="col-4 text-end">
+                                    <h5 class="text-success mb-0">€{{ car.price|floatformat:0 }}</h5>
+                                    <small class="text-muted">Total</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'dashboard:car_detail' car.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+                            <i class="fas fa-shopping-cart me-2"></i>Confirmar Compra
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Formatação automática do telefone
+    const phoneInput = document.getElementById('{{ form.buyer_phone.id_for_label }}');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 0) {
+                if (value.startsWith('351')) {
+                    value = '+' + value;
+                } else if (!value.startsWith('+')) {
+                    value = '+351' + value;
+                }
+            }
+            e.target.value = value;
+        });
+    }
+    
+    // Formatação do código postal
+    const postalInput = document.getElementById('{{ form.buyer_postal_code.id_for_label }}');
+    if (postalInput) {
+        postalInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length >= 4) {
+                value = value.substring(0, 4) + '-' + value.substring(4, 7);
+            }
+            e.target.value = value;
+        });
+    }
+    
+    // Validação do formulário
+    const form = document.getElementById('purchaseForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function(e) {
+        // Desabilitar botão para evitar duplo clique
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processando...';
+        
+        // Se houver erro, reabilitar o botão
+        setTimeout(() => {
+            if (form.querySelector('.text-danger')) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-shopping-cart me-2"></i>Confirmar Compra';
+            }
+        }, 1000);
+    });
+});
+</script>
+{% endblock %}

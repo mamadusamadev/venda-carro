@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Compra - CarZone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .purchase-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #27ae60;
+        }
+        .buyer-info {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            background: #3498db;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 30px;
+        }
+        .status-flow {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚗 CarZone</h1>
+        <h2>🎉 Nova Compra Realizada!</h2>
+    </div>
+    
+    <div class="content">
+        <p>Parabéns <strong>{{ seller.get_full_name|default:seller.username }}</strong>!</p>
+        
+        <p>O seu carro foi comprado com sucesso!</p>
+        
+        <div class="purchase-info">
+            <h3>🛒 Detalhes da Compra</h3>
+            <p><strong>Carro:</strong> {{ car.brand.name }} {{ car.car_model.name }}</p>
+            <p>{{ car.version }} • {{ car.year }} • {{ car.mileage|floatformat:0 }} km</p>
+            <p><strong>Valor da venda:</strong> <span style="color: #27ae60; font-size: 1.2em; font-weight: bold;">€{{ purchase.purchase_price|floatformat:0 }}</span></p>
+            <p><strong>Data da compra:</strong> {{ purchase.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        
+        <div class="buyer-info">
+            <h3>👤 Dados do Comprador</h3>
+            <p><strong>Nome:</strong> {{ purchase.buyer_name }}</p>
+            <p><strong>Email:</strong> {{ purchase.buyer_email }}</p>
+            <p><strong>Telefone:</strong> {{ purchase.buyer_phone }}</p>
+            <p><strong>Cidade:</strong> {{ purchase.buyer_city }}</p>
+            
+            <h4>📍 Morada de Entrega:</h4>
+            <p>{{ purchase.buyer_address }}<br>
+            {{ purchase.buyer_postal_code }} {{ purchase.buyer_city }}</p>
+            
+            {% if purchase.notes %}
+            <h4>📝 Notas do Comprador:</h4>
+            <p style="font-style: italic; background: #f1f3f4; padding: 15px; border-radius: 5px;">
+                "{{ purchase.notes }}"
+            </p>
+            {% endif %}
+        </div>
+        
+        <div class="success">
+            <strong>✅ Status Atual:</strong> Aguardando confirmação do pagamento<br>
+            O carro foi automaticamente marcado como "Reservado" no seu anúncio.
+        </div>
+        
+        <div class="status-flow">
+            <h4>📋 Próximos Passos:</h4>
+            <ol>
+                <li><strong>Aguardar confirmação do pagamento</strong> (você será notificado)</li>
+                <li><strong>Preparar o carro</strong> para entrega</li>
+                <li><strong>Coordenar a entrega</strong> com o comprador</li>
+                <li><strong>Confirmar a entrega</strong> no sistema</li>
+                <li><strong>Receber o pagamento</strong> após confirmação do comprador</li>
+            </ol>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="{{ site_url }}dashboard/compras/{{ purchase.id }}/" class="button">
+                📋 Gerir Esta Venda
+            </a>
+        </div>
+        
+        <div class="warning">
+            <strong>💰 Importante sobre o Pagamento:</strong><br>
+            O dinheiro só será transferido para a sua conta após o comprador confirmar a receção do carro. 
+            Isto garante segurança para ambas as partes.
+        </div>
+        
+        <p>Pode acompanhar o progresso desta venda no seu dashboard do CarZone.</p>
+        
+        <p>Parabéns pela venda!<br>
+        <strong>Equipa CarZone</strong></p>
+    </div>
+    
+    <div class="footer">
+        <p>Este email foi enviado automaticamente. Por favor, não responda diretamente.</p>
+        <p>© {{ "now"|date:"Y" }} CarZone - Todos os direitos reservados</p>
+    </div>
+</body>
+</html>

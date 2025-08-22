@@ -395,6 +395,9 @@ class Favorite(models.Model):
         car.save(update_fields=['favorites_count'])
 
 
+# Modelos de compra serão definidos no final deste arquivo
+
+
 class Review(models.Model):
     """
     Avaliações de vendedores

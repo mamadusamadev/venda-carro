@@ -360,7 +360,31 @@
                     </button>
                     
                     {% if car.seller != request.user %}
-                        <button class="btn btn-success" onclick="contactSeller()">
+                        <!-- Botões de Compra -->
+                        {% if car.status == 'active' %}
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <a href="{% url 'dashboard:purchase_request_create' car.id %}" class="btn btn-outline-success w-100">
+                                    <i class="fas fa-handshake me-2"></i>Solicitar Compra
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{% url 'dashboard:purchase_create' car.id %}" class="btn btn-success w-100">
+                                    <i class="fas fa-shopping-cart me-2"></i>Comprar Agora
+                                </a>
+                            </div>
+                        </div>
+                        {% elif car.status == 'reserved' %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-clock me-2"></i>Este carro está reservado
+                        </div>
+                        {% elif car.status == 'sold' %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-times-circle me-2"></i>Este carro foi vendido
+                        </div>
+                        {% endif %}
+                        
+                        <button class="btn btn-outline-primary" onclick="contactSeller()">
                             <i class="fas fa-phone me-2"></i>Contactar Vendedor
                         </button>
                     {% else %}
