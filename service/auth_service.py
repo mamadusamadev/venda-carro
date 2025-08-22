@@ -1,169 +1,143 @@
-from typing import Optional, Tuple
 from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.backends import ModelBackend
-from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.core.exceptions import ValidationError
-from django.contrib.auth.password_validation import validate_password
-
-from entities.user_entity import UserEntity, AuthCredentials, RegisterData
-from accounts.models import SellerProfile, BuyerProfile
-
-User = get_user_model()
+from django.contrib.auth.hashers import make_password
+from accounts.models import User
+from django.db import IntegrityError
 
 
-class EmailBackend(ModelBackend):
-    """Backend personalizado para autenticação por email"""
-    
-    def authenticate(self, request, username=None, password=None, **kwargs):
-        try:
-            # Tenta encontrar o utilizador pelo email
-            user = User.objects.get(email=username)
-            if user.check_password(password):
-                return user
-        except User.DoesNotExist:
-            return None
+def cadastrar_user(user_entity):
+    """Cadastrar um novo utilizador"""
+    try:
+        user = User.objects.create(
+            username=user_entity.username,
+            email=user_entity.email,
+            password=make_password(user_entity.password),
+            first_name=user_entity.first_name,
+            last_name=user_entity.last_name,
+            phone=user_entity.phone,
+            user_type=user_entity.user_type,
+            is_active=user_entity.is_active
+        )
+        return user
+    except IntegrityError:
         return None
 
 
-class AuthService:
-    """Service responsável pela autenticação e gestão de utilizadores"""
+def autenticar_user(email, password):
+    """Autenticar utilizador"""
+    user = authenticate(username=email, password=password)
+    return user
+
+
+def fazer_login(request, user):
+    """Fazer login do utilizador"""
+    try:
+        login(request, user)
+        return True
+    except Exception:
+        return False
+
+
+def fazer_logout(request):
+    """Fazer logout do utilizador"""
+    logout(request)
+
+
+def listar_users():
+    """Listar todos os utilizadores"""
+    return User.objects.all()
+
+
+def listar_user_id(id):
+    """Buscar utilizador por ID"""
+    try:
+        return User.objects.get(id=id)
+    except User.DoesNotExist:
+        return None
+
+
+def listar_user_email(email):
+    """Buscar utilizador por email"""
+    try:
+        return User.objects.get(email=email)
+    except User.DoesNotExist:
+        return None
+
+
+def listar_user_username(username):
+    """Buscar utilizador por username"""
+    try:
+        return User.objects.get(username=username)
+    except User.DoesNotExist:
+        return None
+
+
+def verificar_email_existe(email):
+    """Verificar se email já existe"""
+    return User.objects.filter(email=email).exists()
+
+
+def verificar_username_existe(username):
+    """Verificar se username já existe"""
+    return User.objects.filter(username=username).exists()
+
+
+def editar_user(user_bd, user_entity):
+    """Editar um utilizador existente"""
+    user_bd.username = user_entity.username
+    user_bd.email = user_entity.email
+    user_bd.first_name = user_entity.first_name
+    user_bd.last_name = user_entity.last_name
+    user_bd.phone = user_entity.phone
+    user_bd.user_type = user_entity.user_type
+    user_bd.is_active = user_entity.is_active
     
-    @staticmethod
-    def authenticate_user(credentials: AuthCredentials) -> Tuple[bool, Optional[User], str]:
-        """
-        Autentica um utilizador usando email e password
-        
-        Returns:
-            Tuple[bool, Optional[User], str]: (sucesso, utilizador, mensagem)
-        """
-        try:
-            # Usa o backend personalizado para autenticação por email
-            backend = EmailBackend()
-            user = backend.authenticate(None, username=credentials.email, password=credentials.password)
-            
-            if user is not None:
-                if user.is_active:
-                    return True, user, "Login realizado com sucesso"
-                else:
-                    return False, None, "Conta desativada. Contacte o administrador."
-            else:
-                return False, None, "Email ou palavra-passe incorretos"
-                
-        except Exception as e:
-            return False, None, f"Erro no login: {str(e)}"
+    # Só atualiza password se foi fornecida nova
+    if user_entity.password:
+        user_bd.password = make_password(user_entity.password)
     
-    @staticmethod
-    def login_user(request, user: User) -> bool:
-        """
-        Faz login do utilizador na sessão
-        
-        Args:
-            request: HttpRequest
-            user: Utilizador a fazer login
-            
-        Returns:
-            bool: True se sucesso
-        """
-        try:
-            login(request, user)
-            return True
-        except Exception:
-            return False
-    
-    @staticmethod
-    def logout_user(request) -> bool:
-        """
-        Faz logout do utilizador
-        
-        Args:
-            request: HttpRequest
-            
-        Returns:
-            bool: True se sucesso
-        """
-        try:
-            logout(request)
-            return True
-        except Exception:
-            return False
-    
-    @staticmethod
-    def register_user(register_data: RegisterData) -> Tuple[bool, Optional[User], str]:
-        """
-        Regista um novo utilizador
-        
-        Args:
-            register_data: Dados do registo
-            
-        Returns:
-            Tuple[bool, Optional[User], str]: (sucesso, utilizador, mensagem)
-        """
-        try:
-            # Validações
-            if register_data.password != register_data.password_confirm:
-                return False, None, "As palavras-passe não coincidem"
-            
-            if User.objects.filter(email=register_data.email).exists():
-                return False, None, "Já existe uma conta com este email"
-            
-            if User.objects.filter(username=register_data.username).exists():
-                return False, None, "Já existe uma conta com este nome de utilizador"
-            
-            if not register_data.terms_accepted:
-                return False, None, "Deve aceitar os termos e condições"
-            
-            # Valida a palavra-passe
-            try:
-                validate_password(register_data.password)
-            except ValidationError as e:
-                return False, None, " ".join(e.messages)
-            
-            # Cria o utilizador numa transação
-            with transaction.atomic():
-                user = User.objects.create_user(
-                    username=register_data.username,
-                    email=register_data.email,
-                    password=register_data.password,
-                    first_name=register_data.first_name,
-                    last_name=register_data.last_name,
-                    phone=register_data.phone,
-                    user_type=register_data.user_type
-                )
-                
-                # Cria perfis baseados no tipo de utilizador
-                if register_data.user_type in ['buyer', 'both']:
-                    BuyerProfile.objects.create(user=user)
-                
-                if register_data.user_type in ['seller', 'both']:
-                    SellerProfile.objects.create(user=user)
-                
-                return True, user, "Conta criada com sucesso"
-                
-        except Exception as e:
-            return False, None, f"Erro ao criar conta: {str(e)}"
-    
-    @staticmethod
-    def check_email_exists(email: str) -> bool:
-        """Verifica se o email já existe"""
-        return User.objects.filter(email=email).exists()
-    
-    @staticmethod
-    def check_username_exists(username: str) -> bool:
-        """Verifica se o username já existe"""
-        return User.objects.filter(username=username).exists()
-    
-    @staticmethod
-    def get_user_entity(user: User) -> UserEntity:
-        """Converte um User model para UserEntity"""
-        return UserEntity(
-            id=user.id,
-            email=user.email,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            phone=user.phone,
-            user_type=user.user_type,
-            is_active=user.is_active,
-            is_verified=user.is_verified
-        ) 
+    user_bd.save(force_update=True)
+    return user_bd
+
+
+def ativar_user(user_bd):
+    """Ativar utilizador"""
+    user_bd.is_active = True
+    user_bd.save(update_fields=['is_active'])
+    return user_bd
+
+
+def desativar_user(user_bd):
+    """Desativar utilizador"""
+    user_bd.is_active = False
+    user_bd.save(update_fields=['is_active'])
+    return user_bd
+
+
+def remover_user(user_bd):
+    """Remover um utilizador"""
+    user_bd.delete()
+
+
+def listar_vendedores():
+    """Listar utilizadores vendedores"""
+    return User.objects.filter(user_type='seller', is_active=True)
+
+
+def listar_compradores():
+    """Listar utilizadores compradores"""
+    return User.objects.filter(user_type='buyer', is_active=True)
+
+
+def contar_users_ativos():
+    """Contar utilizadores ativos"""
+    return User.objects.filter(is_active=True).count()
+
+
+def contar_vendedores():
+    """Contar vendedores"""
+    return User.objects.filter(user_type='seller', is_active=True).count()
+
+
+def contar_compradores():
+    """Contar compradores"""
+    return User.objects.filter(user_type='buyer', is_active=True).count() 

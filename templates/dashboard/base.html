@@ -162,6 +162,15 @@
         .status-sold { background: #f8d7da; color: #721c24; }
         .status-pending { background: #fff3cd; color: #856404; }
 
+        .hover-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .hover-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
         @media (max-width: 768px) {
             .sidebar {
                 margin-left: -250px;
@@ -203,19 +212,30 @@
                     </a>
                 </li>
                 
+                {% if user.user_type == 'seller' or user.is_staff or user.is_superuser %}
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'my_cars' %}active{% endif %}" href="{% url 'dashboard:my_cars' %}">
                         <i class="fas fa-user-car me-2"></i>
                         Meus Carros
                     </a>
                 </li>
+                {% endif %}
                 
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'my_favorites' %}active{% endif %}" href="{% url 'dashboard:my_favorites' %}">
+                        <i class="fas fa-heart me-2"></i>
+                        Meus Favoritos
+                    </a>
+                </li>
+                
+                {% if user.user_type == 'seller' or user.is_staff or user.is_superuser %}
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'car_add' %}active{% endif %}" href="{% url 'dashboard:car_add' %}">
                         <i class="fas fa-plus-circle me-2"></i>
                         Adicionar Carro
                     </a>
                 </li>
+                {% endif %}
                 
                 <li class="nav-item">
                     <a class="nav-link {% if request.resolver_match.url_name == 'statistics' %}active{% endif %}" href="{% url 'dashboard:statistics' %}">

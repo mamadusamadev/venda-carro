@@ -1,338 +1,243 @@
-from typing import List, Optional, Tuple
-from django.db import transaction
-from django.core.files.uploadedfile import UploadedFile
-from django.contrib.auth import get_user_model
-from uuid import UUID
-
 from cars.models import Car, Brand, CarModel, CarPhoto
-from entities.car_entity import CarEntity, CarSearchFilters
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
 
-User = get_user_model()
+
+def cadastrar_car(car_entity):
+    """Cadastrar um novo carro"""
+    car = Car.objects.create(
+        title=car_entity.title,
+        description=car_entity.description,
+        brand=car_entity.brand,
+        car_model=car_entity.car_model,
+        year=car_entity.year,
+        condition=car_entity.condition,
+        price=car_entity.price,
+        original_price=car_entity.original_price,
+        negotiable=car_entity.negotiable,
+        mileage=car_entity.mileage,
+        fuel_type=car_entity.fuel_type,
+        transmission=car_entity.transmission,
+        engine_size=car_entity.engine_size,
+        doors=car_entity.doors,
+        seats=car_entity.seats,
+        color=car_entity.color,
+        license_plate=car_entity.license_plate,
+        registration_date=car_entity.registration_date,
+        inspection_valid_until=car_entity.inspection_valid_until,
+        insurance_valid_until=car_entity.insurance_valid_until,
+        city=car_entity.city,
+        district=car_entity.district,
+        postal_code=car_entity.postal_code,
+        seller=car_entity.seller,
+        status=car_entity.status,
+        featured=car_entity.featured,
+        air_conditioning=car_entity.air_conditioning,
+        abs_brakes=car_entity.abs_brakes,
+        airbags=car_entity.airbags,
+        backup_camera=car_entity.backup_camera,
+        bluetooth=car_entity.bluetooth,
+        central_locking=car_entity.central_locking,
+        electric_windows=car_entity.electric_windows,
+        gps=car_entity.gps,
+        leather_seats=car_entity.leather_seats,
+        parking_sensors=car_entity.parking_sensors,
+        power=car_entity.power,
+        version=car_entity.version
+    )
+    return car
 
 
-class CarService:
-    """Service responsável pela gestão de carros"""
+def listar_cars():
+    """Listar todos os carros"""
+    return Car.objects.all().select_related('brand', 'car_model', 'seller').prefetch_related('photos')
+
+
+def listar_cars_ativos():
+    """Listar carros ativos"""
+    return Car.objects.filter(status='active').select_related('brand', 'car_model', 'seller').prefetch_related('photos')
+
+
+def listar_cars_em_destaque():
+    """Listar carros em destaque"""
+    return Car.objects.filter(status='active', featured=True).select_related('brand', 'car_model', 'seller').prefetch_related('photos')
+
+
+def listar_cars_recentes(limit=6):
+    """Listar carros mais recentes"""
+    return Car.objects.filter(status='active').select_related('brand', 'car_model', 'seller').prefetch_related('photos').order_by('-created_at')[:limit]
+
+
+def listar_car_id(id):
+    """Buscar carro por ID"""
+    return get_object_or_404(
+        Car.objects.select_related('brand', 'car_model', 'seller')
+               .prefetch_related('photos', 'reviews', 'reviews__buyer'),
+        id=id
+    )
+
+
+def listar_cars_vendedor(seller):
+    """Listar carros de um vendedor"""
+    return Car.objects.filter(seller=seller).select_related('brand', 'car_model').prefetch_related('photos')
+
+
+def listar_cars_similares(car, limit=4):
+    """Listar carros similares (mesma marca)"""
+    return Car.objects.filter(
+        brand=car.brand,
+        status='active'
+    ).exclude(id=car.id).select_related('brand', 'car_model', 'seller').prefetch_related('photos')[:limit]
+
+
+def pesquisar_cars(search_query=None, brand=None, fuel_type=None, year=None, max_price=None, 
+                  min_price=None, city=None, transmission=None, condition=None):
+    """Pesquisar carros com filtros"""
+    cars = Car.objects.filter(status='active')
     
-    @staticmethod
-    def create_car(car_data: CarEntity, seller: User) -> Tuple[bool, Optional[Car], str]:
-        """
-        Cria um novo carro com imagens
-        
-        Args:
-            car_data: Dados do carro
-            seller: Utilizador vendedor
-            
-        Returns:
-            Tuple[bool, Optional[Car], str]: (sucesso, carro, mensagem)
-        """
-        try:
-            # Validações
-            if not seller.is_seller():
-                return False, None, "Apenas vendedores podem adicionar carros"
-            
-            # Busca marca e modelo
-            try:
-                brand = Brand.objects.get(name=car_data.brand_name)
-                car_model = CarModel.objects.get(name=car_data.model_name, brand=brand)
-            except (Brand.DoesNotExist, CarModel.DoesNotExist):
-                return False, None, "Marca ou modelo não encontrado"
-            
-            # Cria o carro numa transação
-            with transaction.atomic():
-                car = Car.objects.create(
-                    title=car_data.title,
-                    brand=brand,
-                    car_model=car_model,
-                    year=car_data.year,
-                    price=car_data.price,
-                    mileage=car_data.mileage,
-                    fuel_type=car_data.fuel_type,
-                    transmission=car_data.transmission,
-                    engine_size=car_data.engine_size,
-                    power=car_data.power,
-                    doors=car_data.doors,
-                    seats=car_data.seats,
-                    color=car_data.color,
-                    condition=car_data.condition,
-                    description=car_data.description,
-                    location=car_data.location,
-                    city=car_data.city,
-                    district=car_data.district,
-                    postal_code=car_data.postal_code,
-                    status=car_data.status,
-                    is_featured=car_data.is_featured,
-                    seller=seller,
-                    # Equipamentos
-                    air_conditioning=car_data.air_conditioning,
-                    power_steering=car_data.power_steering,
-                    electric_windows=car_data.electric_windows,
-                    airbags=car_data.airbags,
-                    abs_brakes=car_data.abs_brakes,
-                    alarm_system=car_data.alarm_system,
-                    alloy_wheels=car_data.alloy_wheels,
-                    cd_player=car_data.cd_player,
-                    leather_seats=car_data.leather_seats,
-                    sunroof=car_data.sunroof,
-                    gps_navigation=car_data.gps_navigation,
-                    backup_camera=car_data.backup_camera,
-                )
-                
-                # Adiciona as imagens
-                if car_data.images:
-                    CarService._add_car_images(car, car_data.images)
-                
-                return True, car, "Carro criado com sucesso"
-                
-        except Exception as e:
-            return False, None, f"Erro ao criar carro: {str(e)}"
+    if search_query:
+        cars = cars.filter(
+            Q(title__icontains=search_query) |
+            Q(description__icontains=search_query) |
+            Q(brand__name__icontains=search_query) |
+            Q(car_model__name__icontains=search_query)
+        )
     
-    @staticmethod
-    def update_car(car_id: UUID, car_data: CarEntity, user: User) -> Tuple[bool, Optional[Car], str]:
-        """
-        Atualiza um carro existente
-        
-        Args:
-            car_id: ID do carro
-            car_data: Novos dados do carro
-            user: Utilizador que está a editar
-            
-        Returns:
-            Tuple[bool, Optional[Car], str]: (sucesso, carro, mensagem)
-        """
-        try:
-            car = Car.objects.get(id=car_id)
-            
-            # Verifica se o utilizador pode editar
-            if car.seller != user and not user.is_staff:
-                return False, None, "Não tem permissão para editar este carro"
-            
-            # Busca marca e modelo se alterados
-            if car_data.brand_name and car_data.model_name:
-                try:
-                    brand = Brand.objects.get(name=car_data.brand_name)
-                    car_model = CarModel.objects.get(name=car_data.model_name, brand=brand)
-                    car.brand = brand
-                    car.car_model = car_model
-                except (Brand.DoesNotExist, CarModel.DoesNotExist):
-                    return False, None, "Marca ou modelo não encontrado"
-            
-            # Atualiza os campos
-            with transaction.atomic():
-                car.title = car_data.title or car.title
-                car.year = car_data.year or car.year
-                car.price = car_data.price or car.price
-                car.mileage = car_data.mileage or car.mileage
-                car.fuel_type = car_data.fuel_type or car.fuel_type
-                car.transmission = car_data.transmission or car.transmission
-                car.engine_size = car_data.engine_size or car.engine_size
-                car.power = car_data.power or car.power
-                car.doors = car_data.doors or car.doors
-                car.seats = car_data.seats or car.seats
-                car.color = car_data.color or car.color
-                car.condition = car_data.condition or car.condition
-                car.description = car_data.description or car.description
-                car.location = car_data.location or car.location
-                car.city = car_data.city or car.city
-                car.district = car_data.district or car.district
-                car.postal_code = car_data.postal_code or car.postal_code
-                car.status = car_data.status or car.status
-                
-                # Atualiza equipamentos
-                car.air_conditioning = car_data.air_conditioning
-                car.power_steering = car_data.power_steering
-                car.electric_windows = car_data.electric_windows
-                car.airbags = car_data.airbags
-                car.abs_brakes = car_data.abs_brakes
-                car.alarm_system = car_data.alarm_system
-                car.alloy_wheels = car_data.alloy_wheels
-                car.cd_player = car_data.cd_player
-                car.leather_seats = car_data.leather_seats
-                car.sunroof = car_data.sunroof
-                car.gps_navigation = car_data.gps_navigation
-                car.backup_camera = car_data.backup_camera
-                
-                car.save()
-                
-                # Adiciona novas imagens se fornecidas
-                if car_data.images:
-                    CarService._add_car_images(car, car_data.images)
-                
-                return True, car, "Carro atualizado com sucesso"
-                
-        except Car.DoesNotExist:
-            return False, None, "Carro não encontrado"
-        except Exception as e:
-            return False, None, f"Erro ao atualizar carro: {str(e)}"
+    if brand:
+        cars = cars.filter(brand_id=brand)
     
-    @staticmethod
-    def delete_car(car_id: UUID, user: User) -> Tuple[bool, str]:
-        """
-        Elimina um carro
-        
-        Args:
-            car_id: ID do carro
-            user: Utilizador que está a eliminar
-            
-        Returns:
-            Tuple[bool, str]: (sucesso, mensagem)
-        """
-        try:
-            car = Car.objects.get(id=car_id)
-            
-            # Verifica permissões
-            if car.seller != user and not user.is_staff:
-                return False, "Não tem permissão para eliminar este carro"
-            
-            car.delete()
-            return True, "Carro eliminado com sucesso"
-            
-        except Car.DoesNotExist:
-            return False, "Carro não encontrado"
-        except Exception as e:
-            return False, f"Erro ao eliminar carro: {str(e)}"
+    if fuel_type:
+        cars = cars.filter(fuel_type=fuel_type)
     
-    @staticmethod
-    def search_cars(filters: CarSearchFilters) -> List[Car]:
-        """
-        Pesquisa carros com filtros
-        
-        Args:
-            filters: Filtros de pesquisa
-            
-        Returns:
-            List[Car]: Lista de carros encontrados
-        """
-        queryset = Car.objects.select_related('brand', 'car_model', 'seller').prefetch_related('photos')
-        
-        if filters.search_term:
-            queryset = queryset.filter(
-                title__icontains=filters.search_term
-            )
-        
-        if filters.brand_id:
-            queryset = queryset.filter(brand_id=filters.brand_id)
-        
-        if filters.model_id:
-            queryset = queryset.filter(car_model_id=filters.model_id)
-        
-        if filters.min_price:
-            queryset = queryset.filter(price__gte=filters.min_price)
-        
-        if filters.max_price:
-            queryset = queryset.filter(price__lte=filters.max_price)
-        
-        if filters.min_year:
-            queryset = queryset.filter(year__gte=filters.min_year)
-        
-        if filters.max_year:
-            queryset = queryset.filter(year__lte=filters.max_year)
-        
-        if filters.fuel_type:
-            queryset = queryset.filter(fuel_type=filters.fuel_type)
-        
-        if filters.transmission:
-            queryset = queryset.filter(transmission=filters.transmission)
-        
-        if filters.city:
-            queryset = queryset.filter(city__icontains=filters.city)
-        
-        if filters.status:
-            queryset = queryset.filter(status=filters.status)
-        
-        return queryset.order_by('-created_at')
+    if year:
+        cars = cars.filter(year=year)
     
-    @staticmethod
-    def get_car_by_id(car_id: UUID) -> Optional[Car]:
-        """
-        Busca um carro por ID
-        
-        Args:
-            car_id: ID do carro
-            
-        Returns:
-            Optional[Car]: Carro encontrado ou None
-        """
-        try:
-            return Car.objects.select_related('brand', 'car_model', 'seller').prefetch_related('photos').get(id=car_id)
-        except Car.DoesNotExist:
-            return None
+    if max_price:
+        cars = cars.filter(price__lte=max_price)
     
-    @staticmethod
-    def get_user_cars(user: User) -> List[Car]:
-        """
-        Busca todos os carros de um utilizador
-        
-        Args:
-            user: Utilizador
-            
-        Returns:
-            List[Car]: Lista de carros do utilizador
-        """
-        return Car.objects.filter(seller=user).select_related('brand', 'car_model').prefetch_related('photos').order_by('-created_at')
+    if min_price:
+        cars = cars.filter(price__gte=min_price)
     
-    @staticmethod
-    def _add_car_images(car: Car, images: List[UploadedFile]) -> None:
-        """
-        Adiciona imagens a um carro
-        
-        Args:
-            car: Carro
-            images: Lista de imagens
-        """
-        for index, image in enumerate(images):
-            CarPhoto.objects.create(
-                car=car,
-                image=image,
-                is_primary=(index == 0),  # Primeira imagem é a principal
-                order=index + 1
-            )
+    if city:
+        cars = cars.filter(city__icontains=city)
     
-    @staticmethod
-    def delete_car_image(image_id: int, user: User) -> Tuple[bool, str]:
-        """
-        Elimina uma imagem de carro
-        
-        Args:
-            image_id: ID da imagem
-            user: Utilizador
-            
-        Returns:
-            Tuple[bool, str]: (sucesso, mensagem)
-        """
-        try:
-            photo = CarPhoto.objects.select_related('car').get(id=image_id)
-            
-            # Verifica permissões
-            if photo.car.seller != user and not user.is_staff:
-                return False, "Não tem permissão para eliminar esta imagem"
-            
-            photo.delete()
-            return True, "Imagem eliminada com sucesso"
-            
-        except CarPhoto.DoesNotExist:
-            return False, "Imagem não encontrada"
-        except Exception as e:
-            return False, f"Erro ao eliminar imagem: {str(e)}"
+    if transmission:
+        cars = cars.filter(transmission=transmission)
     
-    @staticmethod
-    def get_brands_with_models() -> List[Brand]:
-        """
-        Retorna todas as marcas com seus modelos
-        
-        Returns:
-            List[Brand]: Lista de marcas com modelos
-        """
-        return Brand.objects.filter(is_active=True).prefetch_related('models').order_by('name')
+    if condition:
+        cars = cars.filter(condition=condition)
     
-    @staticmethod
-    def get_models_by_brand(brand_id: int) -> List[CarModel]:
-        """
-        Retorna modelos de uma marca específica
-        
-        Args:
-            brand_id: ID da marca
-            
-        Returns:
-            List[CarModel]: Lista de modelos
-        """
-        return CarModel.objects.filter(brand_id=brand_id, is_active=True).order_by('name') 
+    return cars.select_related('brand', 'car_model', 'seller').prefetch_related('photos')
+
+
+def editar_car(car_bd, car_entity):
+    """Editar um carro existente"""
+    car_bd.title = car_entity.title
+    car_bd.description = car_entity.description
+    car_bd.brand = car_entity.brand
+    car_bd.car_model = car_entity.car_model
+    car_bd.year = car_entity.year
+    car_bd.condition = car_entity.condition
+    car_bd.price = car_entity.price
+    car_bd.original_price = car_entity.original_price
+    car_bd.negotiable = car_entity.negotiable
+    car_bd.mileage = car_entity.mileage
+    car_bd.fuel_type = car_entity.fuel_type
+    car_bd.transmission = car_entity.transmission
+    car_bd.engine_size = car_entity.engine_size
+    car_bd.doors = car_entity.doors
+    car_bd.seats = car_entity.seats
+    car_bd.color = car_entity.color
+    car_bd.license_plate = car_entity.license_plate
+    car_bd.registration_date = car_entity.registration_date
+    car_bd.inspection_valid_until = car_entity.inspection_valid_until
+    car_bd.insurance_valid_until = car_entity.insurance_valid_until
+    car_bd.city = car_entity.city
+    car_bd.district = car_entity.district
+    car_bd.postal_code = car_entity.postal_code
+    car_bd.status = car_entity.status
+    car_bd.featured = car_entity.featured
+    car_bd.air_conditioning = car_entity.air_conditioning
+    car_bd.abs_brakes = car_entity.abs_brakes
+    car_bd.airbags = car_entity.airbags
+    car_bd.backup_camera = car_entity.backup_camera
+    car_bd.bluetooth = car_entity.bluetooth
+    car_bd.central_locking = car_entity.central_locking
+    car_bd.electric_windows = car_entity.electric_windows
+    car_bd.gps = car_entity.gps
+    car_bd.leather_seats = car_entity.leather_seats
+    car_bd.parking_sensors = car_entity.parking_sensors
+    car_bd.power = car_entity.power
+    car_bd.version = car_entity.version
+    car_bd.save(force_update=True)
+    return car_bd
+
+
+def alterar_status_car(car_bd, novo_status):
+    """Alterar status do carro"""
+    car_bd.status = novo_status
+    car_bd.save(update_fields=['status'])
+    return car_bd
+
+
+def remover_car(car_bd):
+    """Remover um carro"""
+    car_bd.delete()
+
+
+def incrementar_visualizacoes(car_bd):
+    """Incrementar visualizações do carro"""
+    car_bd.views += 1
+    car_bd.save(update_fields=['views'])
+
+
+def adicionar_foto_car(car_bd, foto, is_main=False, caption=''):
+    """Adicionar foto ao carro"""
+    if is_main:
+        # Remove foto principal anterior
+        CarPhoto.objects.filter(car=car_bd, is_main=True).update(is_main=False)
+    
+    car_photo = CarPhoto.objects.create(
+        car=car_bd,
+        photo=foto,
+        is_main=is_main,
+        caption=caption
+    )
+    return car_photo
+
+
+def listar_brands():
+    """Listar todas as marcas ativas"""
+    return Brand.objects.filter(is_active=True).order_by('name')
+
+
+def listar_models_por_brand(brand_id):
+    """Listar modelos por marca"""
+    return CarModel.objects.filter(brand_id=brand_id, is_active=True).order_by('name')
+
+
+def contar_cars_ativos():
+    """Contar total de carros ativos"""
+    return Car.objects.filter(status='active').count()
+
+
+def contar_cars_vendedor(seller):
+    """Contar carros de um vendedor"""
+    return Car.objects.filter(seller=seller).count()
+
+
+def obter_estatisticas_vendedor(seller):
+    """Obter estatísticas do vendedor"""
+    cars = Car.objects.filter(seller=seller)
+    return {
+        'total': cars.count(),
+        'ativos': cars.filter(status='active').count(),
+        'vendidos': cars.filter(status='sold').count(),
+        'reservados': cars.filter(status='reserved').count(),
+        'total_visualizacoes': sum(car.views for car in cars)
+    }
+
+
+def listar_cars_recentes_vendedor(seller, limit=6):
+    """Listar carros recentes de um vendedor"""
+    return Car.objects.filter(seller=seller).order_by('-created_at')[:limit] 

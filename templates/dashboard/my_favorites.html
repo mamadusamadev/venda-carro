@@ -1,0 +1,215 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Meus Favoritos - CarZone{% endblock %}
+{% block page_title %}Meus Favoritos{% endblock %}
+
+{% block content %}
+<!-- Estatísticas Resumidas -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-danger mb-2">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h4>{{ total_favorites }}</h4>
+                <p class="text-muted mb-0">Total de Favoritos</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-success mb-2">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h4>{{ favorites|length }}</h4>
+                <p class="text-muted mb-0">Nesta Página</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-primary mb-2">
+                    <i class="fas fa-search"></i>
+                </div>
+                <a href="{% url 'cars' %}" class="btn btn-primary btn-sm mt-2">
+                    Procurar Carros
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="fs-2 text-info mb-2">
+                    <i class="fas fa-tachometer-alt"></i>
+                </div>
+                <a href="{% url 'dashboard:home' %}" class="btn btn-info btn-sm mt-2">
+                    Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Favoritos -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-heart me-2"></i>
+            Carros Favoritos
+        </h5>
+        <span class="badge bg-primary">{{ total_favorites }} carros</span>
+    </div>
+    <div class="card-body">
+        {% if favorites %}
+            <div class="row">
+                {% for favorite in favorites %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <!-- Imagem do carro -->
+                        {% if favorite.car.get_main_photo %}
+                            <img src="{{ favorite.car.get_main_photo.photo.url }}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="{{ favorite.car.title }}">
+                        {% else %}
+                            <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-car fs-1 text-muted"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Status badge -->
+                        <div class="position-absolute top-0 start-0 m-2">
+                            <span class="badge status-{{ favorite.car.status }}">
+                                {{ favorite.car.get_status_display }}
+                            </span>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <h5 class="card-title mb-0">{{ favorite.car.brand.name }} {{ favorite.car.car_model.name }}</h5>
+                                <button class="btn btn-link p-0 text-danger" onclick="toggleFavorite('{{ favorite.car.id }}', this)" title="Remover dos favoritos">
+                                    <i class="fas fa-heart"></i>
+                                </button>
+                            </div>
+                            
+                            <p class="card-text text-muted mb-2">
+                                {{ favorite.car.version }} • {{ favorite.car.year }} • {{ favorite.car.mileage|floatformat:0 }} km
+                            </p>
+                            
+                            <p class="card-text">{{ favorite.car.description|truncatewords:15 }}</p>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="price-tag">€{{ favorite.car.price|floatformat:0 }}</span>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar"></i> {{ favorite.created_at|date:"d/m/Y" }}
+                                </small>
+                            </div>
+                            
+                            <!-- Informações do vendedor -->
+                            <div class="seller-info mb-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-user"></i> {{ favorite.car.seller.get_full_name|default:favorite.car.seller.username }}
+                                    <span class="ms-2"><i class="fas fa-eye"></i> {{ favorite.car.views }} visualizações</span>
+                                </small>
+                            </div>
+                            
+                            <!-- Botões de ação -->
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'car_detail' favorite.car.id %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye me-2"></i>Ver Detalhes
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Paginação -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Navegação dos favoritos" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">Primeira</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Anterior</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Próxima</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-heart-broken fs-1 text-muted mb-3"></i>
+                <h5 class="text-muted">Ainda não tens carros favoritos</h5>
+                <p class="text-muted">Explora a nossa seleção de carros e adiciona os teus favoritos!</p>
+                <a href="{% url 'cars' %}" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>
+                    Procurar Carros
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleFavorite(carId, button) {
+        fetch(`/dashboard/favoritos/${carId}/toggle/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_favorite === false) {
+                // Remover o card da página
+                const card = button.closest('.col-lg-4');
+                card.style.transition = 'opacity 0.3s';
+                card.style.opacity = '0';
+                setTimeout(() => {
+                    card.remove();
+                    // Recarregar a página se não houver mais favoritos
+                    if (document.querySelectorAll('.col-lg-4').length === 0) {
+                        location.reload();
+                    }
+                }, 300);
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao remover dos favoritos. Tente novamente.');
+        });
+    }
+</script>
+{% endblock %}

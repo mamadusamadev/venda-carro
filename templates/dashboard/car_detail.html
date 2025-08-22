@@ -17,7 +17,7 @@
                     </small>
                 </div>
                 <div>
-                    {% if car.seller == request.user %}
+                    {% if user_can_manage %}
                         <div class="btn-group me-2" role="group">
                             <button type="button" class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown">
                                 <i class="fas fa-tag me-1"></i>Status: {{ car.get_status_display }}
@@ -353,22 +353,26 @@
                 </h3>
                 
                 <div class="d-grid gap-2">
+                    <!-- Botão de Favoritos - Disponível para todos -->
+                    <button class="btn btn-outline-primary" onclick="toggleFavorite()" id="favoriteBtn">
+                        <i class="{% if is_favorited %}fas{% else %}far{% endif %} fa-heart me-2" id="favoriteIcon"></i>
+                        <span id="favoriteText">{% if is_favorited %}Remover dos Favoritos{% else %}Adicionar aos Favoritos{% endif %}</span>
+                    </button>
+                    
                     {% if car.seller != request.user %}
                         <button class="btn btn-success" onclick="contactSeller()">
                             <i class="fas fa-phone me-2"></i>Contactar Vendedor
-                        </button>
-                        <button class="btn btn-outline-primary" onclick="toggleFavorite()">
-                            <i class="{% if is_favorited %}fas{% else %}far{% endif %} fa-heart me-2"></i>
-                            {% if is_favorited %}Remover dos Favoritos{% else %}Adicionar aos Favoritos{% endif %}
-                        </button>
-                        <button class="btn btn-outline-info" onclick="shareAd()">
-                            <i class="fas fa-share me-2"></i>Partilhar Anúncio
                         </button>
                     {% else %}
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle me-2"></i>Este é o seu anúncio
                         </div>
                     {% endif %}
+                    
+                    <!-- Botão de Partilhar - Disponível para todos -->
+                    <button class="btn btn-outline-info" onclick="shareAd()">
+                        <i class="fas fa-share me-2"></i>Partilhar Anúncio
+                    </button>
                 </div>
             </div>
         </div>
@@ -490,8 +494,44 @@ function toggleFavorite() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            location.reload();
+            // Atualizar o botão sem recarregar a página
+            const favoriteIcon = document.getElementById('favoriteIcon');
+            const favoriteText = document.getElementById('favoriteText');
+            const favoriteBtn = document.getElementById('favoriteBtn');
+            
+            if (data.is_favorite) {
+                // Adicionado aos favoritos
+                favoriteIcon.className = 'fas fa-heart me-2';
+                favoriteText.textContent = 'Remover dos Favoritos';
+                favoriteBtn.className = 'btn btn-primary'; // Mudar para botão preenchido
+            } else {
+                // Removido dos favoritos
+                favoriteIcon.className = 'far fa-heart me-2';
+                favoriteText.textContent = 'Adicionar aos Favoritos';
+                favoriteBtn.className = 'btn btn-outline-primary'; // Mudar para botão outline
+            }
+            
+            // Mostrar mensagem de feedback
+            if (data.message) {
+                // Criar toast simples
+                const alert = document.createElement('div');
+                alert.className = 'alert alert-success position-fixed top-0 end-0 m-3';
+                alert.style.zIndex = '9999';
+                alert.innerHTML = `<i class="fas fa-heart me-2"></i>${data.message}`;
+                document.body.appendChild(alert);
+                
+                // Remover após 3 segundos
+                setTimeout(() => {
+                    alert.remove();
+                }, 3000);
+            }
+        } else {
+            alert('Erro ao atualizar favoritos: ' + (data.message || 'Erro desconhecido'));
         }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao atualizar favoritos. Tente novamente.');
     });
 }
 

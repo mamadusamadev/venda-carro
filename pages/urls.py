@@ -10,7 +10,5 @@ urlpatterns = [
     path("contacts", views.contacts, name="contacts"),
     path("cars", views.cars, name="cars"),
     path("carro/<uuid:car_id>/", views.car_detail, name="car_detail"),
-   
-    
-    
+    path("toggle-favorite/", views.toggle_favorite, name="toggle_favorite"),
 ]

@@ -146,8 +146,8 @@ AUTH_USER_MODEL = 'accounts.User'
 
 # Authentication Backends
 AUTHENTICATION_BACKENDS = [
-    'service.auth_service.EmailBackend',  # Backend personalizado para login com email
-    'django.contrib.auth.backends.ModelBackend',  # Backend padrão (fallback)
+    'authentication.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
 
 # Login/Logout URLs

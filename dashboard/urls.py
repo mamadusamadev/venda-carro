@@ -16,6 +16,7 @@ urlpatterns = [
     
     # Carros do utilizador
     path('meus-carros/', views.my_cars, name='my_cars'),
+    path('favoritos/', views.my_favorites, name='my_favorites'),
     
     # Funcionalidades AJAX
     path('favoritos/<uuid:car_id>/toggle/', views.toggle_favorite, name='toggle_favorite'),

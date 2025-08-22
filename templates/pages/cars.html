@@ -3,6 +3,7 @@
 {% load static %}
 
 {% block content %}
+{% csrf_token %}
 
 <!-- Main header end -->
 
@@ -126,11 +127,25 @@
                                     </ul>
                                     
                                     <!-- Informações do vendedor -->
-                                    <div class="seller-info mt-2">
+                                    <div class="seller-info mt-2 d-flex justify-content-between align-items-center">
                                         <small class="text-muted">
                                             <i class="fa fa-user"></i> {{ car.seller.get_full_name|default:car.seller.username }}
                                             <span class="ms-2"><i class="fa fa-eye"></i> {{ car.views }} visualizações</span>
                                         </small>
+                                        
+                                        <!-- Botão de Favoritos -->
+                                        {% if user.is_authenticated %}
+                                            <button class="btn btn-sm btn-outline-danger bg-danger favorite-btn" 
+                                                    data-car-id="{{ car.id }}" 
+                                                    data-is-favorite="{% if car.id in user_favorites %}true{% else %}false{% endif %}"
+                                                    title="Adicionar aos favoritos">
+                                                <i class="fa fa-heart{% if car.id not in user_favorites %}-o{% endif %}"></i>
+                                            </button>
+                                        {% else %}
+                                            <a href="{% url 'authentication:login' %}" class="btn btn-sm  bg-danger btn-outline-danger" title="Fazer login para adicionar aos favoritos">
+                                                <i class="fa fa-heart-o"></i>
+                                            </a>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -349,5 +364,95 @@
     z-index: 2;
 }
 </style>
+
+<script>
+// Função para obter token CSRF
+function getCSRFToken() {
+    const tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (tokenElement) {
+        return tokenElement.value;
+    }
+    
+    // Fallback: buscar no cookie
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrftoken') {
+            return value;
+        }
+    }
+    
+    console.error('Token CSRF não encontrado');
+    return '';
+}
+
+// Função para toggle de favoritos
+document.addEventListener('DOMContentLoaded', function() {
+    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+    console.log('Botões de favoritos encontrados:', favoriteButtons.length);
+    
+    favoriteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const carId = this.dataset.carId;
+            const isFavorite = this.dataset.isFavorite === 'true';
+            const icon = this.querySelector('i');
+            const csrfToken = getCSRFToken();
+            
+            console.log('Clique no botão de favorito - Carro ID:', carId, 'É favorito:', isFavorite);
+            
+            if (!csrfToken) {
+                console.error('Token CSRF não encontrado');
+                alert('Erro: Token de segurança não encontrado. Recarregue a página.');
+                return;
+            }
+            
+            // Fazer requisição AJAX
+            fetch('/toggle-favorite/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    'car_id': carId
+                })
+            })
+            .then(response => {
+                console.log('Status da resposta:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Dados recebidos:', data);
+                if (data.success) {
+                    // Atualizar o botão
+                    if (data.is_favorite) {
+                        icon.className = 'fa fa-heart';
+                        this.dataset.isFavorite = 'true';
+                        this.title = 'Remover dos favoritos';
+                        console.log('Adicionado aos favoritos');
+                    } else {
+                        icon.className = 'fa fa-heart-o';
+                        this.dataset.isFavorite = 'false';
+                        this.title = 'Adicionar aos favoritos';
+                        console.log('Removido dos favoritos');
+                    }
+                } else {
+                    console.error('Erro do servidor:', data.message);
+                    alert('Erro ao atualizar favoritos: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro na requisição:', error);
+                alert('Erro ao atualizar favoritos. Verifique a consola para mais detalhes.');
+            });
+        });
+    });
+});
+</script>
 
 {% endblock content %}
