@@ -8,6 +8,9 @@ User = get_user_model()
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
+    # Dicionário para rastrear utilizadores online por sala
+    online_users = {}
+    
     async def connect(self):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
         self.room_group_name = f'chat_{self.room_id}'
@@ -31,6 +34,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
         
         await self.accept()
         
+        # Adicionar utilizador à lista de online para esta sala
+        if self.room_group_name not in self.online_users:
+            self.online_users[self.room_group_name] = set()
+        self.online_users[self.room_group_name].add(str(self.user.id))
+        
+        print(f"Utilizador {self.user.username} conectado. Online na sala: {self.online_users[self.room_group_name]}")
+        
         # Notificar que o utilizador está online
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -43,6 +53,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         if hasattr(self, 'room_group_name'):
+            # Remover utilizador da lista de online para esta sala
+            if self.room_group_name in self.online_users:
+                self.online_users[self.room_group_name].discard(str(self.user.id))
+                if not self.online_users[self.room_group_name]:
+                    del self.online_users[self.room_group_name]
+            
+            print(f"Utilizador {self.user.username} desconectado. Online na sala: {self.online_users.get(self.room_group_name, set())}")
+            
             # Notificar que o utilizador está offline
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -73,6 +91,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.handle_typing(text_data_json)
             elif action == 'mark_read':
                 await self.mark_messages_read()
+            elif action == 'request_status':
+                await self.send_current_status()
                 
         except json.JSONDecodeError:
             print(f"Erro JSON: {text_data}")
@@ -173,6 +193,34 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
 
+    async def send_current_status(self):
+        """Enviar status atual de todos os utilizadores conectados"""
+        print(f"Enviando status atual para {self.user.username}")
+        
+        # Obter a lista de utilizadores online nesta sala
+        online_in_room = self.online_users.get(self.room_group_name, set())
+        print(f"Utilizadores online na sala: {online_in_room}")
+        
+        # Obter informações da sala de chat
+        chat_room = await self.get_chat_room()
+        if chat_room:
+            # Obter o outro utilizador da conversa usando database_sync_to_async
+            other_user = await self.get_other_user(chat_room)
+            
+            if other_user:
+                other_user_id = str(other_user.id)
+                is_other_online = other_user_id in online_in_room
+                status = 'online' if is_other_online else 'offline'
+                
+                print(f"Outro utilizador {other_user.username} está {status}")
+                
+                # Enviar status do outro utilizador para este utilizador
+                await self.send(text_data=json.dumps({
+                    'type': 'user_status',
+                    'user_id': other_user_id,
+                    'status': status
+                }))
+
     # Handlers para mensagens do grupo
     async def chat_message(self, event):
         message_data = {
@@ -228,6 +276,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             return ChatRoom.objects.get(id=self.room_id)
         except ChatRoom.DoesNotExist:
             return None
+
+    @database_sync_to_async
+    def get_other_user(self, chat_room):
+        """Obter o outro utilizador da conversa (não o atual)"""
+        if chat_room.buyer != self.user:
+            return chat_room.buyer
+        elif chat_room.seller != self.user:
+            return chat_room.seller
+        return None
 
     @database_sync_to_async
     def user_has_permission(self, chat_room):

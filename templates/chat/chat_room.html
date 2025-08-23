@@ -247,10 +247,20 @@
 }
 
 .user-online {
-    color: #28a745 !important;
+    color: #ffc107 !important;
+    font-weight: bold;
 }
 
 .user-offline {
+    color: #6c757d !important;
+}
+
+.status-online {
+    color: #ffc107 !important;
+    font-weight: bold;
+}
+
+.status-offline {
     color: #6c757d !important;
 }
 </style>
@@ -280,6 +290,16 @@ function connectWebSocket() {
     chatSocket.onopen = function(e) {
         console.log('Chat conectado via WebSocket');
         updateConnectionStatus(true);
+        
+        // Solicitar status inicial do outro utilizador
+        console.log('Solicitando status inicial...');
+        setTimeout(() => {
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    'action': 'request_status'
+                }));
+            }
+        }, 500); // Aguardar 500ms para garantir que a conexão está estável
     };
     
     chatSocket.onmessage = function(e) {
@@ -311,6 +331,7 @@ function handleWebSocketMessage(data) {
             addMessage(data);
             break;
         case 'user_status':
+            console.log('Status recebido:', data.user_id, data.status, 'otherUserId:', otherUserId);
             updateUserStatus(data.user_id, data.status);
             break;
         case 'typing':
@@ -508,10 +529,21 @@ function showTypingIndicator(isTypingNow) {
 
 // Atualizar status do utilizador
 function updateUserStatus(userId, status) {
+    console.log('updateUserStatus chamado:', userId, status);
+    console.log('Comparando:', userId, '===', otherUserId, '?', userId === otherUserId);
+    
     if (userId === otherUserId) {
         const statusElement = document.getElementById('user-status');
-        statusElement.textContent = status === 'online' ? 'Online' : 'Offline';
-        statusElement.className = status === 'online' ? 'text-success' : 'text-warning';
+        if (statusElement) {
+            statusElement.textContent = status === 'online' ? 'Online' : 'Offline';
+            // Usar cor amarela vibrante para online e cinza para offline
+            statusElement.className = status === 'online' ? 'status-online' : 'status-offline';
+            console.log('Status atualizado:', status, 'Classe:', statusElement.className);
+        } else {
+            console.error('Elemento user-status não encontrado!');
+        }
+    } else {
+        console.log('UserId não corresponde ao otherUserId, ignorando');
     }
 }
 
