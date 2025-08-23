@@ -24,4 +24,5 @@ urlpatterns = [
     path('api/status/', views.get_chat_status, name='get_status'),
     path('api/send/<uuid:room_id>/', views.send_message_api, name='send_message_api'),
     path('api/messages/<uuid:room_id>/', views.get_messages_api, name='get_messages_api'),
+    path('api/recent-messages/', views.recent_messages_api, name='recent_messages_api'),
 ]

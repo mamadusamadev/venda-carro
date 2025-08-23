@@ -78,10 +78,17 @@
                                     </small>
                                     
                                     <div class="btn-group btn-group-sm">
+                                        {% if chat.status == 'closed' %}
+                                        <button class="btn btn-success btn-sm" 
+                                                onclick="event.stopPropagation(); reopenChat('{{ chat.car.id }}')">
+                                            <i class="fas fa-redo"></i> Reabrir
+                                        </button>
+                                        {% else %}
                                         <button class="btn btn-outline-primary btn-sm" 
                                                 onclick="event.stopPropagation(); openChat('{{ chat.id }}')">
                                             <i class="fas fa-comments"></i>
                                         </button>
+                                        {% endif %}
                                         <button class="btn btn-outline-secondary btn-sm" 
                                                 onclick="event.stopPropagation(); viewCar('{{ chat.car.id }}')">
                                             <i class="fas fa-car"></i>
@@ -227,6 +234,11 @@ function openChat(chatId) {
 
 function viewCar(carId) {
     window.open(`/dashboard/carros/${carId}/`, '_blank');
+}
+
+function reopenChat(carId) {
+    // Redirecionar para iniciar chat (que irá reabrir automaticamente)
+    window.location.href = `/chat/iniciar/${carId}/`;
 }
 
 function closeChat(chatId, carTitle) {

@@ -31,12 +31,14 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'authentication.apps.AuthenticationConfig',
     'dashboard.apps.DashboardConfig',
     'accounts.apps.AccountsConfig',
     'cars.apps.CarsConfig',
     'pages.apps.PagesConfig',
     'chat.apps.ChatConfig',
+    'channels',
   
     'django.contrib.admin',
     'django.contrib.auth',
@@ -184,5 +186,11 @@ except:
 # URL base do site (para links nos emails)
 SITE_URL = 'http://127.0.0.1:8000'
 
-# Configuração WSGI padrão (sem WebSockets por enquanto)
-# ASGI_APPLICATION = 'carzone.asgi.application'
+# Django Channels Configuration (WebSockets)
+ASGI_APPLICATION = 'carzone.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}

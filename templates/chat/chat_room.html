@@ -208,39 +208,59 @@ const currentUsername = '{{ request.user.username }}';
 const otherUserId = '{{ other_user.id }}';
 const otherUsername = '{{ other_user.username }}';
 
-let lastMessageId = null;
-let pollInterval = null;
+let chatSocket = null;
+let typingTimer = null;
+let isTyping = false;
 
-// Inicializar chat sem WebSocket
-function initializeChat() {
-    console.log('Chat inicializado (modo AJAX)');
-    updateConnectionStatus(true);
+// Conectar ao WebSocket
+function connectWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/chat/${chatRoomId}/`;
     
-    // Polling para novas mensagens a cada 3 segundos
-    pollInterval = setInterval(pollForNewMessages, 3000);
+    chatSocket = new WebSocket(wsUrl);
+    
+    chatSocket.onopen = function(e) {
+        console.log('Chat conectado via WebSocket');
+        updateConnectionStatus(true);
+    };
+    
+    chatSocket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        handleWebSocketMessage(data);
+    };
+    
+    chatSocket.onclose = function(e) {
+        console.log('Chat desconectado');
+        updateConnectionStatus(false);
+        
+        // Tentar reconectar após 3 segundos
+        setTimeout(connectWebSocket, 3000);
+    };
+    
+    chatSocket.onerror = function(e) {
+        console.error('Erro no WebSocket:', e);
+    };
 }
 
-// Verificar novas mensagens via AJAX
-function pollForNewMessages() {
-    fetch(`/chat/api/messages/${chatRoomId}/?last_id=${lastMessageId || ''}`, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success && data.messages.length > 0) {
-            data.messages.forEach(message => {
-                if (message.id !== lastMessageId) {
-                    addMessage(message);
-                    lastMessageId = message.id;
-                }
-            });
-        }
-    })
-    .catch(error => {
-        console.error('Erro ao buscar mensagens:', error);
-    });
+// Manipular mensagens do WebSocket
+function handleWebSocketMessage(data) {
+    switch(data.type) {
+        case 'message':
+            addMessage(data);
+            break;
+        case 'user_status':
+            updateUserStatus(data.user_id, data.status);
+            break;
+        case 'typing':
+            showTypingIndicator(data.is_typing);
+            break;
+        case 'messages_read':
+            markMessagesAsRead();
+            break;
+        case 'error':
+            console.error('Erro do WebSocket:', data.message);
+            break;
+    }
 }
 
 // Adicionar nova mensagem à conversa
@@ -285,47 +305,66 @@ function addMessage(data) {
     }
 }
 
-// Enviar mensagem via AJAX
+// Enviar mensagem via WebSocket
 function sendMessage() {
     const messageInput = document.getElementById('message-input');
     const message = messageInput.value.trim();
     
-    if (message) {
-        fetch(`/chat/api/send/${chatRoomId}/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify({
-                'message': message,
-                'type': 'text'
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                messageInput.value = '';
-                // A mensagem será adicionada via polling
-                setTimeout(pollForNewMessages, 500);
-            } else {
-                alert('Erro ao enviar mensagem: ' + (data.error || 'Erro desconhecido'));
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao enviar mensagem:', error);
-            alert('Erro ao enviar mensagem');
-        });
+    if (message && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        chatSocket.send(JSON.stringify({
+            'action': 'send_message',
+            'message': message,
+            'type': 'text'
+        }));
+        
+        messageInput.value = '';
+        stopTyping();
     }
 }
 
-// Atualizar status do utilizador (simplificado)
-function updateUserStatus(status) {
-    const statusElement = document.getElementById('user-status');
-    if (statusElement) {
-        statusElement.textContent = status;
-        statusElement.className = status === 'Online' ? 'text-success' : 'text-warning';
+// Indicar que está a digitar
+function startTyping() {
+    if (!isTyping && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        isTyping = true;
+        chatSocket.send(JSON.stringify({
+            'action': 'typing',
+            'is_typing': true
+        }));
+    }
+    
+    clearTimeout(typingTimer);
+    typingTimer = setTimeout(stopTyping, 3000);
+}
+
+function stopTyping() {
+    if (isTyping && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        isTyping = false;
+        chatSocket.send(JSON.stringify({
+            'action': 'typing',
+            'is_typing': false
+        }));
+    }
+    clearTimeout(typingTimer);
+}
+
+// Mostrar indicador de digitação
+function showTypingIndicator(isTypingNow) {
+    const typingIndicator = document.getElementById('typing-indicator');
+    
+    if (isTypingNow) {
+        typingIndicator.style.display = 'block';
+        scrollToBottom();
+    } else {
+        typingIndicator.style.display = 'none';
+    }
+}
+
+// Atualizar status do utilizador
+function updateUserStatus(userId, status) {
+    if (userId === otherUserId) {
+        const statusElement = document.getElementById('user-status');
+        statusElement.textContent = status === 'online' ? 'Online' : 'Offline';
+        statusElement.className = status === 'online' ? 'text-success' : 'text-warning';
     }
 }
 
@@ -400,7 +439,7 @@ function escapeHtml(text) {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
-    initializeChat();
+    connectWebSocket();
     
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-button');
@@ -414,24 +453,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
+        // Indicar digitação
+        messageInput.addEventListener('input', startTyping);
+        
         // Enviar mensagem ao clicar no botão
         sendButton.addEventListener('click', sendMessage);
-    }
-    
-    // Obter ID da última mensagem existente
-    const lastMessage = document.querySelector('.message[data-message-id]:last-child');
-    if (lastMessage) {
-        lastMessageId = lastMessage.dataset.messageId;
     }
     
     // Rolar para o final ao carregar
     scrollToBottom();
 });
 
-// Limpar polling ao sair da página
+// Fechar conexão ao sair da página
 window.addEventListener('beforeunload', function() {
-    if (pollInterval) {
-        clearInterval(pollInterval);
+    if (chatSocket) {
+        chatSocket.close();
     }
 });
 </script>

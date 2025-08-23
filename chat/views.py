@@ -23,20 +23,28 @@ def start_chat(request, car_id):
         return redirect('dashboard:car_detail', car_id=car_id)
     
     # Verificar se já existe uma sala de chat
-    chat_room, created = ChatRoom.objects.get_or_create(
-        car=car,
-        buyer=request.user,
-        defaults={
-            'seller': car.seller,
-            'status': 'active'
-        }
-    )
-    
-    # Se o chat estava fechado, reabrir
-    if chat_room.status == 'closed':
-        chat_room.reopen_chat()
-        messages.success(request, 'Chat reaberto com sucesso!')
-    elif created:
+    # Verificar se já existe uma sala de chat para este carro e comprador
+    try:
+        chat_room = ChatRoom.objects.get(car=car, buyer=request.user)
+        created = False
+        
+        # Se o chat estava fechado, reabrir
+        if chat_room.status == 'closed':
+            chat_room.reopen_chat()
+            messages.success(request, 'Chat reaberto com sucesso!')
+        else:
+            messages.info(request, 'Continuando conversa existente.')
+            
+    except ChatRoom.DoesNotExist:
+        # Criar nova sala de chat
+        chat_room = ChatRoom.objects.create(
+            car=car,
+            buyer=request.user,
+            seller=car.seller,
+            status='active'
+        )
+        created = True
+        
         # Criar notificação para o vendedor sobre novo chat
         ChatNotification.objects.create(
             recipient=car.seller,
@@ -336,5 +344,65 @@ def get_messages_api(request, room_id):
             'success': True,
             'messages': messages_data
         })
+    
+    return JsonResponse({'success': False, 'error': 'Requisição inválida'})
+
+
+@login_required
+def recent_messages_api(request):
+    """
+    API para obter mensagens recentes para o dropdown
+    """
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or True:  # Permitir acesso direto também
+        try:
+            from django.db import models
+            
+            # Obter salas de chat do utilizador
+            chat_rooms = ChatRoom.objects.filter(
+                models.Q(buyer=request.user) | models.Q(seller=request.user)
+            ).select_related('car', 'buyer', 'seller').prefetch_related('messages')
+            
+            recent_messages = []
+            
+            for chat_room in chat_rooms:
+                # Obter última mensagem da sala
+                last_message = chat_room.messages.filter(is_deleted=False).order_by('-created_at').first()
+                
+                if last_message:
+                    other_user = chat_room.get_other_user(request.user)
+                    
+                    # Verificar se há mensagens não lidas do outro utilizador
+                    unread_messages = chat_room.messages.filter(
+                        sender=other_user,
+                        is_deleted=False,
+                        created_at__gt=chat_room.last_read_buyer if request.user == chat_room.buyer else chat_room.last_read_seller
+                    ).exists()
+                    
+                    recent_messages.append({
+                        'chat_room_id': str(chat_room.id),
+                        'other_user_name': other_user.get_full_name() or other_user.username if other_user else 'Utilizador',
+                        'content': last_message.content[:100] + ('...' if len(last_message.content) > 100 else ''),
+                        'timestamp': last_message.created_at.isoformat(),
+                        'is_read': not unread_messages,
+                        'car_title': chat_room.car.title if chat_room.car else 'Carro removido',
+                        'sender_is_current_user': last_message.sender == request.user
+                    })
+            
+            # Ordenar por timestamp (mais recente primeiro)
+            recent_messages.sort(key=lambda x: x['timestamp'], reverse=True)
+            
+            # Limitar a 10 mensagens mais recentes
+            recent_messages = recent_messages[:10]
+            
+            return JsonResponse({
+                'success': True,
+                'messages': recent_messages
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erro interno: {str(e)}'
+            })
     
     return JsonResponse({'success': False, 'error': 'Requisição inválida'})
