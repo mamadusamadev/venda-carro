@@ -64,6 +64,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
             text_data_json = json.loads(text_data)
             action = text_data_json.get('action')
             
+            print(f"WebSocket recebeu ação: {action}")
+            print(f"Dados recebidos: {text_data_json.keys()}")
+            
             if action == 'send_message':
                 await self.send_message(text_data_json)
             elif action == 'typing':
@@ -72,47 +75,77 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 await self.mark_messages_read()
                 
         except json.JSONDecodeError:
+            print(f"Erro JSON: {text_data}")
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': 'JSON inválido'
+            }))
+        except Exception as e:
+            print(f"Erro no receive: {e}")
+            await self.send(text_data=json.dumps({
+                'type': 'error',
+                'message': f'Erro interno: {str(e)}'
             }))
 
     async def send_message(self, data):
         message_content = data.get('message', '').strip()
         message_type = data.get('type', 'text')
+        file_data = data.get('file_data')
+        file_name = data.get('file_name')
         
-        if not message_content:
-            return
+        print(f"send_message chamado:")
+        print(f"  - message_content: '{message_content}'")
+        print(f"  - file_data presente: {bool(file_data)}")
+        print(f"  - file_name: {file_name}")
         
         chat_room = await self.get_chat_room()
         if not chat_room or chat_room.status != 'active':
+            print("Chat não está ativo")
             await self.send(text_data=json.dumps({
                 'type': 'error',
                 'message': 'Chat está fechado'
             }))
             return
         
+        # Validar se há conteúdo (texto ou arquivo)
+        if not message_content and not file_data:
+            print("Nenhum conteúdo para enviar")
+            return
+        
         # Criar mensagem na base de dados
-        message = await self.create_message(chat_room, message_content, message_type)
+        message = await self.create_message(chat_room, message_content, message_type, file_data, file_name)
         
         if message:
             # Criar notificação para o outro utilizador
             await self.create_notification(chat_room, message)
             
+            # Preparar dados da mensagem
+            message_data = {
+                'type': 'chat_message',
+                'message_id': str(message.id),
+                'message': message_content,
+                'message_type': message_type,
+                'sender_id': str(self.user.id),
+                'sender_username': self.user.username,
+                'sender_name': self.user.get_full_name() or self.user.username,
+                'timestamp': message.created_at.isoformat(),
+                'is_edited': False
+            }
+            
+            # Adicionar informações do arquivo se existir
+            if message.attachment:
+                message_data.update({
+                    'attachment_url': message.attachment.url,
+                    'attachment_name': message.attachment_name or message.attachment.name,
+                    'file_size': await self.get_file_size_formatted(message),
+                    'file_icon': await self.get_file_icon(message),
+                    'is_image': await self.is_image(message)
+                })
+            
             # Enviar mensagem para o grupo
             await self.channel_layer.group_send(
                 self.room_group_name,
-                {
-                    'type': 'chat_message',
-                    'message_id': str(message.id),
-                    'message': message_content,
-                    'message_type': message_type,
-                    'sender_id': str(self.user.id),
-                    'sender_username': self.user.username,
-                    'sender_name': self.user.get_full_name() or self.user.username,
-                    'timestamp': message.created_at.isoformat(),
-                    'is_edited': False
-                }
+                message_data
             )
 
     async def handle_typing(self, data):
@@ -142,7 +175,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
     # Handlers para mensagens do grupo
     async def chat_message(self, event):
-        await self.send(text_data=json.dumps({
+        message_data = {
             'type': 'message',
             'message_id': event['message_id'],
             'message': event['message'],
@@ -152,7 +185,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'sender_name': event['sender_name'],
             'timestamp': event['timestamp'],
             'is_edited': event['is_edited']
-        }))
+        }
+        
+        # Adicionar informações do anexo se existir
+        if 'attachment_url' in event:
+            message_data.update({
+                'attachment_url': event['attachment_url'],
+                'attachment_name': event['attachment_name'],
+                'file_size': event['file_size'],
+                'file_icon': event['file_icon'],
+                'is_image': event['is_image']
+            })
+            
+        print(f"Enviando mensagem via WebSocket: {message_data.keys()}")
+        await self.send(text_data=json.dumps(message_data))
 
     async def user_status(self, event):
         await self.send(text_data=json.dumps({
@@ -188,15 +234,39 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return self.user == chat_room.buyer or self.user == chat_room.seller
 
     @database_sync_to_async
-    def create_message(self, chat_room, content, message_type):
+    def create_message(self, chat_room, content, message_type, file_data=None, file_name=None):
         try:
-            return ChatMessage.objects.create(
+            from django.core.files.base import ContentFile
+            import base64
+            
+            message = ChatMessage(
                 chat_room=chat_room,
                 sender=self.user,
                 content=content,
                 message_type=message_type
             )
-        except Exception:
+            
+            # Se há dados de arquivo, processar
+            if file_data and file_name:
+                # Decodificar dados base64
+                format, imgstr = file_data.split(';base64,')
+                ext = format.split('/')[-1]
+                
+                # Criar arquivo a partir dos dados
+                file_content = ContentFile(base64.b64decode(imgstr), name=file_name)
+                message.attachment = file_content
+                message.attachment_name = file_name
+                
+                # Determinar tipo da mensagem baseado no arquivo
+                if ext.lower() in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp']:
+                    message.message_type = 'image'
+                else:
+                    message.message_type = 'file'
+            
+            message.save()
+            return message
+        except Exception as e:
+            print(f"Erro ao criar mensagem: {e}")
             return None
 
     @database_sync_to_async
@@ -221,3 +291,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             chat_room.mark_as_read(self.user)
         except Exception:
             pass
+    
+    @database_sync_to_async
+    def get_file_size_formatted(self, message):
+        return message.get_file_size_formatted()
+    
+    @database_sync_to_async
+    def get_file_icon(self, message):
+        return message.get_file_icon()
+    
+    @database_sync_to_async
+    def is_image(self, message):
+        return message.is_image()

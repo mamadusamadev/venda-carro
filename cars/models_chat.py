@@ -159,6 +159,54 @@ class ChatMessage(models.Model):
         self.is_deleted = True
         self.content = "[Mensagem apagada]"
         self.save(update_fields=['is_deleted', 'content'])
+    
+    def get_file_size_formatted(self):
+        """Retorna o tamanho do arquivo formatado"""
+        if self.attachment:
+            size = self.attachment.size
+            if size < 1024:
+                return f"{size} B"
+            elif size < 1024 * 1024:
+                return f"{size / 1024:.1f} KB"
+            elif size < 1024 * 1024 * 1024:
+                return f"{size / (1024 * 1024):.1f} MB"
+            else:
+                return f"{size / (1024 * 1024 * 1024):.1f} GB"
+        return ""
+    
+    def get_file_icon(self):
+        """Retorna o ícone apropriado para o tipo de arquivo"""
+        if not self.attachment:
+            return "fas fa-file"
+        
+        file_name = self.attachment_name or self.attachment.name
+        extension = file_name.split('.')[-1].lower() if '.' in file_name else ''
+        
+        icon_map = {
+            # Imagens
+            'jpg': 'fas fa-image', 'jpeg': 'fas fa-image', 'png': 'fas fa-image',
+            'gif': 'fas fa-image', 'bmp': 'fas fa-image', 'svg': 'fas fa-image',
+            # Documentos
+            'pdf': 'fas fa-file-pdf', 'doc': 'fas fa-file-word', 'docx': 'fas fa-file-word',
+            'xls': 'fas fa-file-excel', 'xlsx': 'fas fa-file-excel',
+            'ppt': 'fas fa-file-powerpoint', 'pptx': 'fas fa-file-powerpoint',
+            # Áudio/Vídeo
+            'mp3': 'fas fa-file-audio', 'wav': 'fas fa-file-audio', 'ogg': 'fas fa-file-audio',
+            'mp4': 'fas fa-file-video', 'avi': 'fas fa-file-video', 'mov': 'fas fa-file-video',
+            # Arquivos
+            'zip': 'fas fa-file-archive', 'rar': 'fas fa-file-archive', '7z': 'fas fa-file-archive',
+            'txt': 'fas fa-file-alt', 'rtf': 'fas fa-file-alt',
+        }
+        
+        return icon_map.get(extension, 'fas fa-file')
+    
+    def is_image(self):
+        """Verifica se o anexo é uma imagem"""
+        if not self.attachment:
+            return False
+        file_name = self.attachment_name or self.attachment.name
+        extension = file_name.split('.')[-1].lower() if '.' in file_name else ''
+        return extension in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp']
 
     def edit_message(self, new_content):
         """Editar mensagem"""
