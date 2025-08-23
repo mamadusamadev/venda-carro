@@ -149,6 +149,12 @@
                         </div>
                         
                         <div class="col-md-6 mb-3">
+                            <label for="license_plate" class="form-label">Matrícula *</label>
+                            <input type="text" class="form-control" id="license_plate" name="license_plate" required
+                                   value="{{ car.license_plate }}" placeholder="Ex: 00-AA-00" maxlength="10">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
                             <label for="doors" class="form-label">Portas *</label>
                             <select class="form-select" id="doors" name="doors" required>
                                 {% for value, label in door_choices %}

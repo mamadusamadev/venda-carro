@@ -19,8 +19,8 @@ class CarForm(forms.ModelForm):
         fields = [
             'title', 'brand', 'car_model', 'year', 'price', 'original_price',
             'mileage', 'fuel_type', 'transmission', 'condition', 'doors',
-            'seats', 'color', 'engine_size', 'power', 'description',
-            'city', 'district', 'postal_code', 'negotiable',
+            'seats', 'color', 'engine_size', 'power', 'license_plate',
+            'description', 'city', 'district', 'postal_code', 'negotiable',
             # Features
             'air_conditioning', 'abs_brakes', 'airbags', 'electric_windows',
             'central_locking', 'leather_seats', 'gps',
@@ -45,6 +45,7 @@ class CarForm(forms.ModelForm):
             'color': TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Azul Metálico'}),
             'engine_size': NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'min': '0'}),
             'power': NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'license_plate': TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: 00-AA-00'}),
             'description': Textarea(attrs={
                 'class': 'form-control', 
                 'rows': 4, 
@@ -87,6 +88,7 @@ class CarForm(forms.ModelForm):
             'color': 'Cor',
             'engine_size': 'Cilindrada (L)',
             'power': 'Potência (CV)',
+            'license_plate': 'Matrícula',
             'description': 'Descrição',
             'city': 'Cidade',
             'district': 'Distrito',

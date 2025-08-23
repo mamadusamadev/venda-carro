@@ -142,6 +142,7 @@ def car_add(request):
             district = form_car.cleaned_data["district"]
             postal_code = form_car.cleaned_data.get("postal_code")
             negotiable = form_car.cleaned_data.get("negotiable", False)
+            license_plate = form_car.cleaned_data["license_plate"]
             registration_date = form_car.cleaned_data.get("registration_date")
             inspection_valid_until = form_car.cleaned_data.get("inspection_valid_until")
             insurance_valid_until = form_car.cleaned_data.get("insurance_valid_until")
@@ -176,6 +177,7 @@ def car_add(request):
                 color=color,
                 engine_size=engine_size,
                 power=power,
+                license_plate=license_plate,
                 description=description,
                 city=city,
                 district=district,
