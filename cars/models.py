@@ -707,3 +707,10 @@ class CarAlert(models.Model):
 
     def __str__(self):
         return f"Alerta de {self.user.username}: {self.name}"
+
+
+# Importar modelos de compra
+from .models_purchase import PurchaseRequest, Purchase, PurchaseStatusHistory, Notification
+
+# Importar modelos de chat
+from .models_chat import ChatRoom, ChatMessage, ChatNotification

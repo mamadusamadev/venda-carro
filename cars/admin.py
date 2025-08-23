@@ -358,3 +358,72 @@ class NotificationAdmin(admin.ModelAdmin):
             'fields': ('is_read', 'created_at', 'read_at')
         })
     )
+
+
+# Registar modelos de chat
+from .models_chat import ChatRoom, ChatMessage, ChatNotification
+
+
+@admin.register(ChatRoom)
+class ChatRoomAdmin(admin.ModelAdmin):
+    list_display = ('car', 'buyer', 'seller', 'status', 'created_at', 'last_activity')
+    list_filter = ('status', 'created_at', 'last_activity')
+    search_fields = ('car__title', 'buyer__username', 'seller__username')
+    readonly_fields = ('created_at', 'last_activity')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('car', 'buyer', 'seller', 'status')
+        }),
+        ('Controle', {
+            'fields': ('closed_by', 'closed_at', 'buyer_last_read', 'seller_last_read')
+        }),
+        ('Datas', {
+            'fields': ('created_at', 'last_activity'),
+            'classes': ('collapse',)
+        })
+    )
+
+
+@admin.register(ChatMessage)
+class ChatMessageAdmin(admin.ModelAdmin):
+    list_display = ('chat_room', 'sender', 'message_type', 'content_preview', 'created_at', 'is_deleted')
+    list_filter = ('message_type', 'is_deleted', 'created_at')
+    search_fields = ('content', 'sender__username', 'chat_room__car__title')
+    readonly_fields = ('created_at', 'edited_at')
+    
+    def content_preview(self, obj):
+        return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content
+    content_preview.short_description = 'Conteúdo'
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('chat_room', 'sender', 'message_type')
+        }),
+        ('Conteúdo', {
+            'fields': ('content', 'attachment', 'attachment_name')
+        }),
+        ('Status', {
+            'fields': ('is_edited', 'is_deleted', 'created_at', 'edited_at')
+        })
+    )
+
+
+@admin.register(ChatNotification)
+class ChatNotificationAdmin(admin.ModelAdmin):
+    list_display = ('recipient', 'notification_type', 'title', 'is_read', 'created_at')
+    list_filter = ('notification_type', 'is_read', 'created_at')
+    search_fields = ('title', 'content', 'recipient__username')
+    readonly_fields = ('created_at', 'read_at')
+    
+    fieldsets = (
+        ('Informações Básicas', {
+            'fields': ('recipient', 'chat_room', 'message', 'notification_type')
+        }),
+        ('Conteúdo', {
+            'fields': ('title', 'content')
+        }),
+        ('Status', {
+            'fields': ('is_read', 'created_at', 'read_at')
+        })
+    )

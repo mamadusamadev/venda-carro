@@ -1,0 +1,438 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Chat - {{ other_user.get_full_name|default:other_user.username }} - CarZone{% endblock %}
+{% block page_title %}Chat sobre {{ car.title }}{% endblock %}
+
+{% block content %}
+<div class="row h-100">
+    <div class="col-12">
+        <!-- Header do Chat -->
+        <div class="card mb-0" style="height: calc(100vh - 200px);">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-user-circle fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0">{{ other_user.get_full_name|default:other_user.username }}</h6>
+                            <small class="opacity-75">
+                                {% if is_buyer %}Vendedor{% else %}Comprador{% endif %} • 
+                                <span id="user-status" class="text-warning">Offline</span>
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex align-items-center">
+                        <!-- Informações do Carro -->
+                        <div class="me-3">
+                            <small class="opacity-75">{{ car.brand.name }} {{ car.car_model.name }} • €{{ car.price|floatformat:0 }}</small>
+                        </div>
+                        
+                        <!-- Botões de Ação -->
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-light" onclick="viewCarDetails()">
+                                <i class="fas fa-car"></i>
+                            </button>
+                            {% if chat_room.status == 'active' %}
+                            <button class="btn btn-sm btn-outline-light" onclick="closeChat()" id="close-chat-btn">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Área de Mensagens -->
+            <div class="card-body p-0 d-flex flex-column" style="height: calc(100% - 120px);">
+                <div class="flex-grow-1 overflow-auto p-3" id="messages-container">
+                    <!-- Status do Chat -->
+                    {% if chat_room.status == 'closed' %}
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-lock me-2"></i>
+                        Este chat foi fechado por {{ chat_room.closed_by.get_full_name|default:chat_room.closed_by.username }} 
+                        em {{ chat_room.closed_at|date:"d/m/Y H:i" }}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Mensagens Existentes -->
+                    {% for message in messages %}
+                    <div class="message mb-3 {% if message.sender == request.user %}sent{% else %}received{% endif %}" 
+                         data-message-id="{{ message.id }}">
+                        <div class="d-flex {% if message.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+                            <div class="message-content {% if message.sender == request.user %}bg-primary text-white{% else %}bg-light{% endif %} p-3 rounded-3" 
+                                 style="max-width: 70%;">
+                                <div class="message-text">{{ message.content }}</div>
+                                <div class="message-time mt-1">
+                                    <small class="{% if message.sender == request.user %}text-white-50{% else %}text-muted{% endif %}">
+                                        {{ message.created_at|date:"H:i" }}
+                                        {% if message.is_edited %}
+                                            <i class="fas fa-edit ms-1" title="Editada"></i>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-5" id="no-messages">
+                        <i class="fas fa-comments fs-1 mb-3"></i>
+                        <p>Ainda não há mensagens neste chat.</p>
+                        <p>Seja o primeiro a enviar uma mensagem!</p>
+                    </div>
+                    {% endfor %}
+                    
+                    <!-- Indicador de Digitação -->
+                    <div id="typing-indicator" class="message mb-3 received" style="display: none;">
+                        <div class="d-flex justify-content-start">
+                            <div class="bg-light p-3 rounded-3">
+                                <div class="typing-animation">
+                                    <span class="typing-dot"></span>
+                                    <span class="typing-dot"></span>
+                                    <span class="typing-dot"></span>
+                                </div>
+                                <small class="text-muted">{{ other_user.username }} está a digitar...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Área de Input -->
+                {% if chat_room.status == 'active' %}
+                <div class="border-top p-3">
+                    {% csrf_token %}
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="message-input" 
+                               placeholder="Digite sua mensagem..." maxlength="1000">
+                        <button class="btn btn-primary" type="button" id="send-button">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Pressione Enter para enviar</small>
+                </div>
+                {% else %}
+                <div class="border-top p-3 bg-light">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-lock me-2"></i>
+                        Este chat está fechado
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Fechar Chat -->
+<div class="modal fade" id="closeChatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Fechar Chat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja fechar este chat?</p>
+                <p class="text-muted small">Esta ação não pode ser desfeita. O chat será arquivado e não será possível enviar mais mensagens.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmCloseChat()">Fechar Chat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.message.sent .message-content {
+    margin-left: auto;
+}
+
+.message.received .message-content {
+    margin-right: auto;
+}
+
+#messages-container {
+    scroll-behavior: smooth;
+}
+
+.typing-animation {
+    display: inline-flex;
+    gap: 3px;
+    margin-right: 8px;
+}
+
+.typing-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #6c757d;
+    animation: typing 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typing {
+    0%, 60%, 100% {
+        transform: translateY(0);
+    }
+    30% {
+        transform: translateY(-10px);
+    }
+}
+
+.user-online {
+    color: #28a745 !important;
+}
+
+.user-offline {
+    color: #6c757d !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const chatRoomId = '{{ chat_room.id }}';
+const currentUserId = '{{ request.user.id }}';
+const currentUsername = '{{ request.user.username }}';
+const otherUserId = '{{ other_user.id }}';
+const otherUsername = '{{ other_user.username }}';
+
+let lastMessageId = null;
+let pollInterval = null;
+
+// Inicializar chat sem WebSocket
+function initializeChat() {
+    console.log('Chat inicializado (modo AJAX)');
+    updateConnectionStatus(true);
+    
+    // Polling para novas mensagens a cada 3 segundos
+    pollInterval = setInterval(pollForNewMessages, 3000);
+}
+
+// Verificar novas mensagens via AJAX
+function pollForNewMessages() {
+    fetch(`/chat/api/messages/${chatRoomId}/?last_id=${lastMessageId || ''}`, {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.messages.length > 0) {
+            data.messages.forEach(message => {
+                if (message.id !== lastMessageId) {
+                    addMessage(message);
+                    lastMessageId = message.id;
+                }
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao buscar mensagens:', error);
+    });
+}
+
+// Adicionar nova mensagem à conversa
+function addMessage(data) {
+    const messagesContainer = document.getElementById('messages-container');
+    const noMessages = document.getElementById('no-messages');
+    
+    if (noMessages) {
+        noMessages.remove();
+    }
+    
+    const messageDiv = document.createElement('div');
+    const isOwn = data.sender_id === currentUserId;
+    
+    messageDiv.className = `message mb-3 ${isOwn ? 'sent' : 'received'}`;
+    messageDiv.dataset.messageId = data.message_id;
+    
+    const timestamp = new Date(data.timestamp).toLocaleTimeString('pt-PT', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    
+    messageDiv.innerHTML = `
+        <div class="d-flex ${isOwn ? 'justify-content-end' : 'justify-content-start'}">
+            <div class="message-content ${isOwn ? 'bg-primary text-white' : 'bg-light'} p-3 rounded-3" style="max-width: 70%;">
+                <div class="message-text">${escapeHtml(data.message)}</div>
+                <div class="message-time mt-1">
+                    <small class="${isOwn ? 'text-white-50' : 'text-muted'}">
+                        ${timestamp}
+                    </small>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    messagesContainer.appendChild(messageDiv);
+    scrollToBottom();
+    
+    // Reproduzir som de notificação se não for própria mensagem
+    if (!isOwn) {
+        playNotificationSound();
+    }
+}
+
+// Enviar mensagem via AJAX
+function sendMessage() {
+    const messageInput = document.getElementById('message-input');
+    const message = messageInput.value.trim();
+    
+    if (message) {
+        fetch(`/chat/api/send/${chatRoomId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({
+                'message': message,
+                'type': 'text'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageInput.value = '';
+                // A mensagem será adicionada via polling
+                setTimeout(pollForNewMessages, 500);
+            } else {
+                alert('Erro ao enviar mensagem: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao enviar mensagem:', error);
+            alert('Erro ao enviar mensagem');
+        });
+    }
+}
+
+// Atualizar status do utilizador (simplificado)
+function updateUserStatus(status) {
+    const statusElement = document.getElementById('user-status');
+    if (statusElement) {
+        statusElement.textContent = status;
+        statusElement.className = status === 'Online' ? 'text-success' : 'text-warning';
+    }
+}
+
+// Atualizar status da conexão
+function updateConnectionStatus(isConnected) {
+    // Pode adicionar indicador visual da conexão aqui
+}
+
+// Rolar para o final das mensagens
+function scrollToBottom() {
+    const messagesContainer = document.getElementById('messages-container');
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Fechar chat
+function closeChat() {
+    const modal = new bootstrap.Modal(document.getElementById('closeChatModal'));
+    modal.show();
+}
+
+function confirmCloseChat() {
+    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        chatSocket.send(JSON.stringify({
+            'action': 'close_chat'
+        }));
+    }
+    
+    // Também fazer requisição HTTP
+    fetch(`/chat/fechar/${chatRoomId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    }).then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = '/chat/meus-chats/';
+        }
+    });
+}
+
+// Manipular chat fechado
+function handleChatClosed(data) {
+    const inputArea = document.querySelector('.border-top.p-3');
+    if (inputArea) {
+        inputArea.innerHTML = `
+            <div class="text-center text-muted">
+                <i class="fas fa-lock me-2"></i>
+                Chat fechado por ${data.closed_by_username}
+            </div>
+        `;
+    }
+}
+
+// Ver detalhes do carro
+function viewCarDetails() {
+    window.open(`/dashboard/carros/{{ car.id }}/`, '_blank');
+}
+
+// Reproduzir som de notificação
+function playNotificationSound() {
+    // Implementar som de notificação se necessário
+}
+
+// Escapar HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    initializeChat();
+    
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    
+    if (messageInput && sendButton) {
+        // Enviar mensagem ao pressionar Enter
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Enviar mensagem ao clicar no botão
+        sendButton.addEventListener('click', sendMessage);
+    }
+    
+    // Obter ID da última mensagem existente
+    const lastMessage = document.querySelector('.message[data-message-id]:last-child');
+    if (lastMessage) {
+        lastMessageId = lastMessage.dataset.messageId;
+    }
+    
+    // Rolar para o final ao carregar
+    scrollToBottom();
+});
+
+// Limpar polling ao sair da página
+window.addEventListener('beforeunload', function() {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Meus Chats - CarZone{% endblock %}
+{% block page_title %}Meus Chats{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        {% if chats %}
+            <div class="row">
+                {% for chat in chats %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 chat-card {% if chat.unread_count > 0 %}border-primary{% endif %}" 
+                         onclick="openChat('{{ chat.id }}')">
+                        <div class="card-body">
+                            <!-- Header do Chat -->
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        <i class="fas fa-user-circle fs-3 text-primary"></i>
+                                    </div>
+                                    <div>
+                                        {% if chat.buyer == request.user %}
+                                            <h6 class="mb-0">{{ chat.seller.get_full_name|default:chat.seller.username }}</h6>
+                                            <small class="text-muted">Vendedor</small>
+                                        {% else %}
+                                            <h6 class="mb-0">{{ chat.buyer.get_full_name|default:chat.buyer.username }}</h6>
+                                            <small class="text-muted">Comprador</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="text-end">
+                                    {% if chat.unread_count > 0 %}
+                                        <span class="badge bg-danger rounded-pill">{{ chat.unread_count }}</span>
+                                    {% endif %}
+                                    <div class="mt-1">
+                                        <span class="badge bg-{% if chat.status == 'active' %}success{% elif chat.status == 'closed' %}secondary{% else %}warning{% endif %}">
+                                            {{ chat.get_status_display }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Informações do Carro -->
+                            <div class="mb-3">
+                                <div class="d-flex align-items-center">
+                                    {% if chat.car.get_main_photo %}
+                                        <img src="{{ chat.car.get_main_photo.photo.url }}" 
+                                             class="rounded me-3" 
+                                             style="width: 60px; height: 60px; object-fit: cover;" 
+                                             alt="{{ chat.car.title }}">
+                                    {% else %}
+                                        <div class="bg-light rounded me-3 d-flex align-items-center justify-content-center" 
+                                             style="width: 60px; height: 60px;">
+                                            <i class="fas fa-car text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ chat.car.brand.name }} {{ chat.car.car_model.name }}</h6>
+                                        <p class="text-muted mb-0 small">{{ chat.car.version }} • {{ chat.car.year }}</p>
+                                        <p class="text-success mb-0 fw-bold">€{{ chat.car.price|floatformat:0 }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Última Atividade -->
+                            <div class="border-top pt-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {% if chat.last_message_time %}
+                                            {{ chat.last_message_time|timesince }} atrás
+                                        {% else %}
+                                            {{ chat.created_at|timesince }} atrás
+                                        {% endif %}
+                                    </small>
+                                    
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                onclick="event.stopPropagation(); openChat('{{ chat.id }}')">
+                                            <i class="fas fa-comments"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary btn-sm" 
+                                                onclick="event.stopPropagation(); viewCar('{{ chat.car.id }}')">
+                                            <i class="fas fa-car"></i>
+                                        </button>
+                                        {% if chat.status == 'active' %}
+                                        <button class="btn btn-outline-danger btn-sm" 
+                                                onclick="event.stopPropagation(); closeChat('{{ chat.id }}', '{{ chat.car.title }}')">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Paginação -->
+            {% if chats.has_other_pages %}
+            <nav aria-label="Paginação dos chats">
+                <ul class="pagination justify-content-center">
+                    {% if chats.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">Primeira</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ chats.previous_page_number }}">Anterior</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in chats.paginator.page_range %}
+                        {% if chats.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > chats.number|add:'-3' and num < chats.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if chats.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ chats.next_page_number }}">Próxima</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ chats.paginator.num_pages }}">Última</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <!-- Estado Vazio -->
+            <div class="text-center py-5">
+                <i class="fas fa-comments fs-1 text-muted mb-4"></i>
+                <h4 class="text-muted mb-3">Ainda não tem chats</h4>
+                <p class="text-muted mb-4">
+                    Quando iniciar uma conversa com um vendedor ou um comprador entrar em contacto consigo, 
+                    os chats aparecerão aqui.
+                </p>
+                <div class="d-flex justify-content-center gap-3">
+                    <a href="{% url 'dashboard:car_list' %}" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>
+                        Procurar Carros
+                    </a>
+                    {% if request.user.user_type == 'seller' or request.user.user_type == 'both' %}
+                    <a href="{% url 'dashboard:car_add' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-plus me-2"></i>
+                        Vender Carro
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Fechar Chat -->
+<div class="modal fade" id="closeChatModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Fechar Chat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja fechar o chat sobre <strong id="chat-car-title"></strong>?</p>
+                <p class="text-muted small">Esta ação não pode ser desfeita. O chat será arquivado.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirm-close-btn">Fechar Chat</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.chat-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.chat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+}
+
+.chat-card.border-primary {
+    border-width: 2px !important;
+}
+
+.chat-card .btn-group {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.chat-card:hover .btn-group {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .chat-card .btn-group {
+        opacity: 1;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let chatToClose = null;
+
+function openChat(chatId) {
+    window.location.href = `/chat/sala/${chatId}/`;
+}
+
+function viewCar(carId) {
+    window.open(`/dashboard/carros/${carId}/`, '_blank');
+}
+
+function closeChat(chatId, carTitle) {
+    chatToClose = chatId;
+    document.getElementById('chat-car-title').textContent = carTitle;
+    
+    const modal = new bootstrap.Modal(document.getElementById('closeChatModal'));
+    modal.show();
+}
+
+document.getElementById('confirm-close-btn').addEventListener('click', function() {
+    if (chatToClose) {
+        fetch(`/chat/fechar/${chatToClose}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Erro ao fechar chat. Tente novamente.');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao fechar chat. Tente novamente.');
+        });
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('closeChatModal'));
+        modal.hide();
+        chatToClose = null;
+    }
+});
+
+// Auto-refresh para verificar novos chats
+setInterval(function() {
+    // Verificar se há novos chats ou mensagens
+    fetch('/chat/api/status/', {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.unread_messages > 0) {
+            // Atualizar badge de notificações se necessário
+            updateChatNotifications(data.unread_messages);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao verificar status do chat:', error);
+    });
+}, 30000); // Verificar a cada 30 segundos
+
+function updateChatNotifications(count) {
+    // Atualizar contador na sidebar se existir
+    const chatBadge = document.querySelector('#chat-notification-count');
+    if (chatBadge) {
+        if (count > 0) {
+            chatBadge.textContent = count;
+            chatBadge.style.display = 'inline';
+        } else {
+            chatBadge.style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

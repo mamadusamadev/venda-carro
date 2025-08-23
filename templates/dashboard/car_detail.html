@@ -360,6 +360,10 @@
                     </button>
                     
                     {% if car.seller != request.user %}
+                        <!-- Botão de Chat - Apenas para compradores -->
+                        <a href="{% url 'chat:start_chat' car.id %}" class="btn btn-success">
+                            <i class="fas fa-comments me-2"></i>Fale com o Vendedor
+                        </a>
                         <!-- Botões de Compra -->
                         {% if car.status == 'active' %}
                         <div class="row g-2 mb-3">
