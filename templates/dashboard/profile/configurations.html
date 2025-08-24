@@ -1,0 +1,394 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - CarZone{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Configurações
+                </h5>
+                <a href="{% url 'dashboard:profile' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar
+                </a>
+            </div>
+            <div class="card-body">
+                
+                <!-- Notificações (para compradores) -->
+                {% if user.can_buy %}
+                <div class="mb-5">
+                    <h6 class="mb-3">
+                        <i class="fas fa-bell me-2"></i>
+                        Notificações
+                    </h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Tipos de Notificação</h6>
+                                    
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="notifications_email" 
+                                               {% if buyer_profile.notifications_email %}checked{% endif %}
+                                               onchange="toggleNotification('email', this.checked)">
+                                        <label class="form-check-label" for="notifications_email">
+                                            <i class="fas fa-envelope me-2"></i>
+                                            Notificações por Email
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="notifications_sms" 
+                                               {% if buyer_profile.notifications_sms %}checked{% endif %}
+                                               onchange="toggleNotification('sms', this.checked)">
+                                        <label class="form-check-label" for="notifications_sms">
+                                            <i class="fas fa-sms me-2"></i>
+                                            Notificações por SMS
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="notifications_push" 
+                                               {% if buyer_profile.notifications_push %}checked{% endif %}
+                                               onchange="toggleNotification('push', this.checked)">
+                                        <label class="form-check-label" for="notifications_push">
+                                            <i class="fas fa-bell me-2"></i>
+                                            Notificações Push
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Alertas</h6>
+                                    
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="price_alerts" 
+                                               {% if buyer_profile.price_alerts %}checked{% endif %}
+                                               onchange="toggleNotification('price_alerts', this.checked)">
+                                        <label class="form-check-label" for="price_alerts">
+                                            <i class="fas fa-tag me-2"></i>
+                                            Alertas de Preço
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" 
+                                               id="new_car_alerts" 
+                                               {% if buyer_profile.new_car_alerts %}checked{% endif %}
+                                               onchange="toggleNotification('new_car_alerts', this.checked)">
+                                        <label class="form-check-label" for="new_car_alerts">
+                                            <i class="fas fa-car me-2"></i>
+                                            Alertas de Carros Novos
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Nota:</strong> Os alertas de preço notificam quando carros nos seus favoritos baixam de preço. 
+                        Os alertas de carros novos notificam quando carros que correspondem às suas preferências são publicados.
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Privacidade e Segurança -->
+                <div class="mb-5">
+                    <h6 class="mb-3">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Privacidade e Segurança
+                    </h6>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-lock me-2"></i>
+                                            Palavra-passe
+                                        </h6>
+                                        <p class="mb-1 text-muted">Altere a sua palavra-passe regularmente para manter a conta segura.</p>
+                                    </div>
+                                    <a href="{% url 'dashboard:change_password' %}" class="btn btn-outline-primary btn-sm">
+                                        Alterar
+                                    </a>
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-envelope me-2"></i>
+                                            Email Verificado
+                                        </h6>
+                                        <p class="mb-1 text-muted">
+                                            {% if user.email_verified %}
+                                                <span class="badge bg-success">Verificado</span>
+                                                O seu email está verificado.
+                                            {% else %}
+                                                <span class="badge bg-warning">Não Verificado</span>
+                                                Verifique o seu email para maior segurança.
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    {% if not user.email_verified %}
+                                    <button class="btn btn-outline-primary btn-sm" onclick="sendEmailVerification()">
+                                        Verificar
+                                    </button>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-phone me-2"></i>
+                                            Telefone Verificado
+                                        </h6>
+                                        <p class="mb-1 text-muted">
+                                            {% if user.phone_verified %}
+                                                <span class="badge bg-success">Verificado</span>
+                                                O seu telefone está verificado.
+                                            {% else %}
+                                                <span class="badge bg-warning">Não Verificado</span>
+                                                Verifique o seu telefone para maior segurança.
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    {% if not user.phone_verified %}
+                                    <button class="btn btn-outline-primary btn-sm" onclick="sendPhoneVerification()">
+                                        Verificar
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Conta -->
+                <div class="mb-5">
+                    <h6 class="mb-3">
+                        <i class="fas fa-user-cog me-2"></i>
+                        Gestão da Conta
+                    </h6>
+                    
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="list-group">
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-download me-2"></i>
+                                            Exportar Dados
+                                        </h6>
+                                        <p class="mb-1 text-muted">Descarregue uma cópia dos seus dados pessoais.</p>
+                                    </div>
+                                    <button class="btn btn-outline-info btn-sm" onclick="exportData()">
+                                        Exportar
+                                    </button>
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-pause me-2"></i>
+                                            Desativar Conta
+                                        </h6>
+                                        <p class="mb-1 text-muted">Desative temporariamente a sua conta.</p>
+                                    </div>
+                                    <button class="btn btn-outline-warning btn-sm" onclick="deactivateAccount()">
+                                        Desativar
+                                    </button>
+                                </div>
+                                
+                                <div class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1 text-danger">
+                                            <i class="fas fa-trash me-2"></i>
+                                            Eliminar Conta
+                                        </h6>
+                                        <p class="mb-1 text-muted">Elimine permanentemente a sua conta e todos os dados.</p>
+                                    </div>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="deleteAccount()">
+                                        Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Informações da Conta -->
+                <div class="mb-3">
+                    <h6 class="mb-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Informações da Conta
+                    </h6>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Membro desde:</strong> {{ user.date_joined|date:"d/m/Y" }}</p>
+                            <p><strong>Último login:</strong> {{ user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Tipo de conta:</strong> {{ user.get_user_type_display }}</p>
+                            <p><strong>Status:</strong> 
+                                {% if user.is_verified %}
+                                    <span class="badge bg-success">Verificado</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Não Verificado</span>
+                                {% endif %}
+                                
+                                {% if user.is_premium %}
+                                    <span class="badge bg-warning">Premium</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Alternar notificações
+function toggleNotification(type, enabled) {
+    fetch('{% url 'dashboard:configurations' %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `action=toggle_notifications&type=${type}&enabled=${enabled}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('success', data.message);
+        } else {
+            showToast('error', data.message);
+            // Reverter o switch se houve erro
+            document.getElementById(`notifications_${type}`) || document.getElementById(type).checked = !enabled;
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showToast('error', 'Erro ao atualizar configuração');
+        // Reverter o switch se houve erro
+        document.getElementById(`notifications_${type}`) || document.getElementById(type).checked = !enabled;
+    });
+}
+
+// Verificação de email
+function sendEmailVerification() {
+    showToast('info', 'Funcionalidade em desenvolvimento');
+}
+
+// Verificação de telefone
+function sendPhoneVerification() {
+    showToast('info', 'Funcionalidade em desenvolvimento');
+}
+
+// Exportar dados
+function exportData() {
+    showToast('info', 'Funcionalidade em desenvolvimento');
+}
+
+// Desativar conta
+function deactivateAccount() {
+    if (confirm('Tem certeza que deseja desativar a sua conta? Poderá reativá-la posteriormente fazendo login novamente.')) {
+        showToast('info', 'Funcionalidade em desenvolvimento');
+    }
+}
+
+// Eliminar conta
+function deleteAccount() {
+    const confirmation = prompt('Para confirmar a eliminação da conta, digite "ELIMINAR" (em maiúsculas):');
+    
+    if (confirmation === 'ELIMINAR') {
+        if (confirm('Esta ação é irreversível! Tem mesmo certeza que deseja eliminar permanentemente a sua conta?')) {
+            fetch('{% url 'dashboard:configurations' %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'action=delete_account'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', data.message);
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showToast('error', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('error', 'Erro ao eliminar conta');
+            });
+        }
+    } else if (confirmation !== null) {
+        showToast('warning', 'Confirmação incorreta. Eliminação cancelada.');
+    }
+}
+
+// Função auxiliar para mostrar notificações
+function showToast(type, message) {
+    // Criar elemento de toast
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 1050; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remover automaticamente após 5 segundos
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, 5000);
+}
+
+// Adicionar token CSRF para requests AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    // Adicionar token CSRF hidden se não existir
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const token = document.createElement('input');
+        token.type = 'hidden';
+        token.name = 'csrfmiddlewaretoken';
+        token.value = '{{ csrf_token }}';
+        document.body.appendChild(token);
+    }
+});
+</script>
+{% endblock %}

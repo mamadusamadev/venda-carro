@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_purchase
+from . import profile_views
 
 app_name = 'dashboard'
 
@@ -45,4 +46,14 @@ urlpatterns = [
     path('notificacoes/<uuid:notification_id>/ler/', views_purchase.notification_mark_read, name='notification_mark_read'),
     path('notificacoes/marcar-todas-lidas/', views_purchase.notifications_mark_all_read, name='notifications_mark_all_read'),
     path('notificacoes/count/', views_purchase.notifications_count, name='notifications_count'),
+    
+    # Perfil e Configurações
+    path('perfil/', profile_views.profile_view, name='profile'),
+    path('perfil/editar/', profile_views.edit_profile, name='edit_profile'),
+    path('perfil/vendedor/', profile_views.edit_seller_profile, name='edit_seller_profile'),
+    path('perfil/comprador/', profile_views.edit_buyer_profile, name='edit_buyer_profile'),
+    path('perfil/alterar-password/', profile_views.change_password, name='change_password'),
+    path('perfil/estatisticas/', profile_views.profile_statistics, name='profile_statistics'),
+    path('perfil/avatar/eliminar/', profile_views.delete_avatar, name='delete_avatar'),
+    path('configuracoes/', profile_views.configurations, name='configurations'),
 ] 

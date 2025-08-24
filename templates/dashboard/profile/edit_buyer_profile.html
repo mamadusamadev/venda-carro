@@ -1,0 +1,337 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - CarZone{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-shopping-cart me-2"></i>
+                    Preferências de Compra
+                </h5>
+                <a href="{% url 'dashboard:profile' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar
+                </a>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Marcas Preferidas -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-star me-2"></i>
+                            Marcas Preferidas
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="{{ form.preferred_brands.id_for_label }}" class="form-label">{{ form.preferred_brands.label }}</label>
+                                <div class="row">
+                                    {% for choice in form.preferred_brands %}
+                                        <div class="col-md-3 col-sm-6 mb-2">
+                                            <div class="form-check">
+                                                {{ choice.tag }}
+                                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                    {{ choice.choice_label }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.preferred_brands.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.preferred_brands.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Selecione as marcas de carros que mais lhe interessam para receber alertas personalizados.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Orçamento -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-euro-sign me-2"></i>
+                            Orçamento
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.budget_min.id_for_label }}" class="form-label">{{ form.budget_min.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    {{ form.budget_min }}
+                                </div>
+                                {% if form.budget_min.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.budget_min.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.budget_max.id_for_label }}" class="form-label">{{ form.budget_max.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">€</span>
+                                    {{ form.budget_max }}
+                                </div>
+                                {% if form.budget_max.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.budget_max.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="form-text">
+                            Defina o seu orçamento para receber alertas de carros dentro da sua faixa de preços.
+                        </div>
+                    </div>
+                    
+                    <!-- Tipos de Combustível -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-gas-pump me-2"></i>
+                            Tipos de Combustível
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="{{ form.fuel_types.id_for_label }}" class="form-label">{{ form.fuel_types.label }}</label>
+                                <div class="row">
+                                    {% for choice in form.fuel_types %}
+                                        <div class="col-md-3 col-sm-6 mb-2">
+                                            <div class="form-check">
+                                                {{ choice.tag }}
+                                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                                    {{ choice.choice_label }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                {% if form.fuel_types.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.fuel_types.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ano e Quilometragem -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-calendar-alt me-2"></i>
+                            Ano e Quilometragem
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.year_min.id_for_label }}" class="form-label">{{ form.year_min.label }}</label>
+                                {{ form.year_min }}
+                                {% if form.year_min.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.year_min.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.year_max.id_for_label }}" class="form-label">{{ form.year_max.label }}</label>
+                                {{ form.year_max }}
+                                {% if form.year_max.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.year_max.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.max_mileage.id_for_label }}" class="form-label">{{ form.max_mileage.label }}</label>
+                                <div class="input-group">
+                                    {{ form.max_mileage }}
+                                    <span class="input-group-text">km</span>
+                                </div>
+                                {% if form.max_mileage.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.max_mileage.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Notificações -->
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-bell me-2"></i>
+                            Preferências de Notificação
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Métodos de Notificação</h6>
+                                        
+                                        <div class="form-check form-switch mb-2">
+                                            {{ form.notifications_email }}
+                                            <label class="form-check-label" for="{{ form.notifications_email.id_for_label }}">
+                                                <i class="fas fa-envelope me-2"></i>
+                                                {{ form.notifications_email.label }}
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch mb-2">
+                                            {{ form.notifications_sms }}
+                                            <label class="form-check-label" for="{{ form.notifications_sms.id_for_label }}">
+                                                <i class="fas fa-sms me-2"></i>
+                                                {{ form.notifications_sms.label }}
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch">
+                                            {{ form.notifications_push }}
+                                            <label class="form-check-label" for="{{ form.notifications_push.id_for_label }}">
+                                                <i class="fas fa-bell me-2"></i>
+                                                {{ form.notifications_push.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Tipos de Alerta</h6>
+                                        
+                                        <div class="form-check form-switch mb-2">
+                                            {{ form.price_alerts }}
+                                            <label class="form-check-label" for="{{ form.price_alerts.id_for_label }}">
+                                                <i class="fas fa-tag me-2"></i>
+                                                {{ form.price_alerts.label }}
+                                            </label>
+                                        </div>
+                                        
+                                        <div class="form-check form-switch">
+                                            {{ form.new_car_alerts }}
+                                            <label class="form-check-label" for="{{ form.new_car_alerts.id_for_label }}">
+                                                <i class="fas fa-car me-2"></i>
+                                                {{ form.new_car_alerts.label }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Dica:</strong> Ative os alertas para ser notificado quando carros que correspondem às suas 
+                            preferências forem publicados ou quando os preços dos seus favoritos baixarem.
+                        </div>
+                    </div>
+                    
+                    <!-- Estatísticas (somente leitura) -->
+                    {% if buyer_profile %}
+                    <div class="mb-4">
+                        <h6 class="mb-3">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Seu Histórico
+                        </h6>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-primary">{{ buyer_profile.total_purchases }}</h4>
+                                    <small class="text-muted">Compras Realizadas</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-success">€{{ buyer_profile.total_spent|floatformat:0 }}</h4>
+                                    <small class="text-muted">Total Gasto</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded">
+                                    <h4 class="text-info">{{ user.favorites.count }}</h4>
+                                    <small class="text-muted">Favoritos Atuais</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Botões -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{% url 'dashboard:profile' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i>
+                            Cancelar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>
+                            Guardar Preferências
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Validação de orçamento
+document.addEventListener('DOMContentLoaded', function() {
+    const budgetMin = document.getElementById('{{ form.budget_min.id_for_label }}');
+    const budgetMax = document.getElementById('{{ form.budget_max.id_for_label }}');
+    
+    function validateBudget() {
+        const min = parseFloat(budgetMin.value) || 0;
+        const max = parseFloat(budgetMax.value) || 0;
+        
+        if (min > 0 && max > 0 && min > max) {
+            budgetMax.setCustomValidity('O orçamento máximo deve ser maior que o mínimo');
+        } else {
+            budgetMax.setCustomValidity('');
+        }
+    }
+    
+    budgetMin.addEventListener('input', validateBudget);
+    budgetMax.addEventListener('input', validateBudget);
+    
+    // Validação de anos
+    const yearMin = document.getElementById('{{ form.year_min.id_for_label }}');
+    const yearMax = document.getElementById('{{ form.year_max.id_for_label }}');
+    
+    function validateYear() {
+        const min = parseInt(yearMin.value) || 0;
+        const max = parseInt(yearMax.value) || 0;
+        const currentYear = new Date().getFullYear();
+        
+        if (min > 0 && max > 0 && min > max) {
+            yearMax.setCustomValidity('O ano máximo deve ser maior que o mínimo');
+        } else if (max > currentYear) {
+            yearMax.setCustomValidity('O ano não pode ser superior ao ano atual');
+        } else {
+            yearMax.setCustomValidity('');
+        }
+    }
+    
+    yearMin.addEventListener('input', validateYear);
+    yearMax.addEventListener('input', validateYear);
+});
+</script>
+{% endblock %}

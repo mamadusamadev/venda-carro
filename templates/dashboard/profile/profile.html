@@ -1,0 +1,258 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}Meu Perfil - CarZone{% endblock %}
+{% block page_title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Sidebar do Perfil -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <!-- Avatar -->
+                <div class="mb-3">
+                    {% if user.avatar %}
+                        <img src="{{ user.avatar.url }}" alt="Avatar" class="rounded-circle" width="100" height="100" style="object-fit: cover;">
+                    {% else %}
+                        <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 100px; height: 100px; margin: 0 auto;">
+                            <i class="fas fa-user fa-3x text-white"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Informações básicas -->
+                <h5 class="card-title">{{ user.get_full_name|default:user.username }}</h5>
+                <p class="text-muted">{{ user.get_user_type_display }}</p>
+                
+                {% if user.is_verified %}
+                    <span class="badge bg-success">
+                        <i class="fas fa-check-circle me-1"></i>
+                        Verificado
+                    </span>
+                {% endif %}
+                
+                {% if user.is_premium %}
+                    <span class="badge bg-warning">
+                        <i class="fas fa-crown me-1"></i>
+                        Premium
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Menu de Navegação -->
+        <div class="card mt-3">
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'dashboard:edit_profile' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-edit me-2"></i>
+                        Editar Perfil
+                    </a>
+                    
+                    {% if is_seller %}
+                    <a href="{% url 'dashboard:edit_seller_profile' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-store me-2"></i>
+                        Perfil de Vendedor
+                    </a>
+                    {% endif %}
+                    
+                    {% if is_buyer %}
+                    <a href="{% url 'dashboard:edit_buyer_profile' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-shopping-cart me-2"></i>
+                        Preferências de Compra
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{% url 'dashboard:change_password' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-lock me-2"></i>
+                        Alterar Palavra-passe
+                    </a>
+                    
+                    <a href="{% url 'dashboard:profile_statistics' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Estatísticas
+                    </a>
+                    
+                    <a href="{% url 'dashboard:configurations' %}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-cog me-2"></i>
+                        Configurações
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Conteúdo Principal -->
+    <div class="col-md-9">
+        <!-- Informações Pessoais -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Informações Pessoais
+                </h5>
+                <a href="{% url 'dashboard:edit_profile' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-edit me-1"></i>
+                    Editar
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nome:</strong> {{ user.first_name|default:"Não informado" }}</p>
+                        <p><strong>Apelido:</strong> {{ user.last_name|default:"Não informado" }}</p>
+                        <p><strong>Email:</strong> {{ user.email }}</p>
+                        <p><strong>Utilizador:</strong> {{ user.username }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Telefone:</strong> {{ user.phone|default:"Não informado" }}</p>
+                        <p><strong>Data de Nascimento:</strong> {{ user.birth_date|default:"Não informado" }}</p>
+                        <p><strong>Cidade:</strong> {{ user.city|default:"Não informado" }}</p>
+                        <p><strong>Distrito:</strong> {{ user.district|default:"Não informado" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Perfil de Vendedor (se aplicável) -->
+        {% if is_seller %}
+        <div class="card mt-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-store me-2"></i>
+                    Perfil de Vendedor
+                </h5>
+                <a href="{% url 'dashboard:edit_seller_profile' %}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-edit me-1"></i>
+                    Editar
+                </a>
+            </div>
+            <div class="card-body">
+                {% if seller_profile %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Tipo:</strong> {{ seller_profile.get_seller_type_display }}</p>
+                            {% if seller_profile.company_name %}
+                                <p><strong>Empresa:</strong> {{ seller_profile.company_name }}</p>
+                            {% endif %}
+                            {% if seller_profile.nif %}
+                                <p><strong>NIF:</strong> {{ seller_profile.nif }}</p>
+                            {% endif %}
+                            <p><strong>Morada:</strong> {{ seller_profile.address|default:"Não informado" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Cidade:</strong> {{ seller_profile.city|default:"Não informado" }}</p>
+                            <p><strong>Distrito:</strong> {{ seller_profile.district|default:"Não informado" }}</p>
+                            <p><strong>Código Postal:</strong> {{ seller_profile.postal_code|default:"Não informado" }}</p>
+                            <p><strong>Avaliação:</strong> 
+                                <span class="text-warning">
+                                    {% for i in "12345" %}
+                                        {% if forloop.counter <= seller_profile.rating %}
+                                            <i class="fas fa-star"></i>
+                                        {% else %}
+                                            <i class="far fa-star"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                    ({{ seller_profile.rating }}/5)
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if seller_profile.description %}
+                    <hr>
+                    <h6>Descrição:</h6>
+                    <p>{{ seller_profile.description }}</p>
+                    {% endif %}
+                    
+                    {% if seller_profile.website or seller_profile.facebook_url or seller_profile.instagram_url %}
+                    <hr>
+                    <h6>Links:</h6>
+                    <div class="d-flex gap-2">
+                        {% if seller_profile.website %}
+                            <a href="{{ seller_profile.website }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-globe me-1"></i>
+                                Website
+                            </a>
+                        {% endif %}
+                        {% if seller_profile.facebook_url %}
+                            <a href="{{ seller_profile.facebook_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fab fa-facebook me-1"></i>
+                                Facebook
+                            </a>
+                        {% endif %}
+                        {% if seller_profile.instagram_url %}
+                            <a href="{{ seller_profile.instagram_url }}" target="_blank" class="btn btn-sm btn-outline-danger">
+                                <i class="fab fa-instagram me-1"></i>
+                                Instagram
+                            </a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-store fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Complete o seu perfil de vendedor para começar a vender carros.</p>
+                        <a href="{% url 'dashboard:edit_seller_profile' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-1"></i>
+                            Criar Perfil de Vendedor
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Estatísticas Rápidas -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Resumo da Atividade
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    {% if is_seller %}
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h4 class="text-primary">{{ user.seller_cars.count }}</h4>
+                                <small class="text-muted">Carros Publicados</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h4 class="text-success">{{ user.seller_cars.filter.status='sold'.count }}</h4>
+                                <small class="text-muted">Carros Vendidos</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                    
+                    {% if is_buyer %}
+                        <div class="col-md-3">
+                            <div class="border-end">
+                                <h4 class="text-warning">{{ user.favorites.count }}</h4>
+                                <small class="text-muted">Favoritos</small>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div>
+                                <h4 class="text-info">{{ user.car_views.count }}</h4>
+                                <small class="text-muted">Carros Visualizados</small>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{% url 'dashboard:profile_statistics' %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-chart-bar me-1"></i>
+                        Ver Estatísticas Completas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

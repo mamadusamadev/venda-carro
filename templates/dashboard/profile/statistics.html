@@ -1,0 +1,345 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - CarZone{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Estatísticas do Perfil
+                </h5>
+                <a href="{% url 'dashboard:profile' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>
+                    Voltar
+                </a>
+            </div>
+            <div class="card-body">
+                
+                <!-- Estatísticas Gerais -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="text-center p-4 bg-primary text-white rounded">
+                            <i class="fas fa-user fa-2x mb-2"></i>
+                            <h4>{{ user.get_user_type_display }}</h4>
+                            <small>Tipo de Conta</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-4 bg-info text-white rounded">
+                            <i class="fas fa-calendar fa-2x mb-2"></i>
+                            <h4>{{ user.date_joined|timesince }}</h4>
+                            <small>Membro há</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-4 bg-success text-white rounded">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <h4>
+                                {% if user.is_verified %}
+                                    Verificado
+                                {% else %}
+                                    Não Verificado
+                                {% endif %}
+                            </h4>
+                            <small>Status da Conta</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center p-4 bg-warning text-white rounded">
+                            <i class="fas fa-crown fa-2x mb-2"></i>
+                            <h4>
+                                {% if user.is_premium %}
+                                    Premium
+                                {% else %}
+                                    Standard
+                                {% endif %}
+                            </h4>
+                            <small>Tipo de Plano</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estatísticas de Vendedor -->
+                {% if user.can_sell and stats.seller %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-store me-2"></i>
+                            Estatísticas de Vendedor
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-2">
+                                <div class="border-end">
+                                    <h4 class="text-primary">{{ stats.seller.total_cars }}</h4>
+                                    <small class="text-muted">Total de Carros</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border-end">
+                                    <h4 class="text-success">{{ stats.seller.active_cars }}</h4>
+                                    <small class="text-muted">Carros Ativos</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border-end">
+                                    <h4 class="text-info">{{ stats.seller.sold_cars }}</h4>
+                                    <small class="text-muted">Carros Vendidos</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border-end">
+                                    <h4 class="text-warning">{{ stats.seller.total_views }}</h4>
+                                    <small class="text-muted">Total de Visualizações</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="border-end">
+                                    <h4 class="text-danger">{{ stats.seller.total_favorites }}</h4>
+                                    <small class="text-muted">Total de Favoritos</small>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div>
+                                    <h4 class="text-dark">€{{ stats.seller.average_price|floatformat:0 }}</h4>
+                                    <small class="text-muted">Preço Médio</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Gráfico de desempenho -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Visualizações nos Últimos 30 Dias</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1 me-3">
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-info" role="progressbar" 
+                                                 style="width: {% if stats.seller.total_views > 0 %}{{ stats.seller.views_last_30_days|div:stats.seller.total_views|mul:100 }}{% else %}0{% endif %}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="text-muted">{{ stats.seller.views_last_30_days }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <h6>Taxa de Vendas</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1 me-3">
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: {% if stats.seller.total_cars > 0 %}{{ stats.seller.sold_cars|div:stats.seller.total_cars|mul:100 }}{% else %}0{% endif %}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="text-muted">
+                                        {% if stats.seller.total_cars > 0 %}
+                                            {{ stats.seller.sold_cars|div:stats.seller.total_cars|mul:100|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Estatísticas de Comprador -->
+                {% if user.can_buy and stats.buyer %}
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-shopping-cart me-2"></i>
+                            Estatísticas de Comprador
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <div class="border-end">
+                                    <h4 class="text-danger">{{ stats.buyer.total_favorites }}</h4>
+                                    <small class="text-muted">Carros Favoritos</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="border-end">
+                                    <h4 class="text-info">{{ stats.buyer.total_views }}</h4>
+                                    <small class="text-muted">Carros Visualizados</small>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div>
+                                    <h4 class="text-warning">{{ stats.buyer.searches_last_30_days }}</h4>
+                                    <small class="text-muted">Pesquisas (30 dias)</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr>
+                        
+                        <!-- Atividade recente -->
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6>Atividade de Pesquisa</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-grow-1 me-3">
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-warning" role="progressbar" 
+                                                 style="width: {% if stats.buyer.total_views > 0 %}{{ stats.buyer.searches_last_30_days|div:stats.buyer.total_views|mul:100 }}{% else %}0{% endif %}%">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <span class="text-muted">
+                                        {% if stats.buyer.total_views > 0 %}
+                                            {{ stats.buyer.searches_last_30_days|div:stats.buyer.total_views|mul:100|floatformat:1 }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                        da atividade total
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Dicas de Melhoria -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Dicas para Melhorar o seu Perfil
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-group list-group-flush">
+                                    {% if not user.avatar %}
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <i class="fas fa-user-circle me-2 text-warning"></i>
+                                            <div>
+                                                <strong>Adicione uma foto de perfil</strong>
+                                                <small class="text-muted d-block">Perfis com fotos são mais confiáveis</small>
+                                            </div>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% if not user.phone_verified %}
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <i class="fas fa-phone me-2 text-info"></i>
+                                            <div>
+                                                <strong>Verifique o seu telefone</strong>
+                                                <small class="text-muted d-block">Aumenta a confiança dos outros utilizadores</small>
+                                            </div>
+                                        </li>
+                                    {% endif %}
+                                    
+                                    {% if not user.email_verified %}
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <i class="fas fa-envelope me-2 text-danger"></i>
+                                            <div>
+                                                <strong>Verifique o seu email</strong>
+                                                <small class="text-muted d-block">Necessário para recuperar a conta</small>
+                                            </div>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                {% if user.can_sell %}
+                                    <ul class="list-group list-group-flush">
+                                        {% if not user.seller_profile.description %}
+                                            <li class="list-group-item d-flex align-items-center">
+                                                <i class="fas fa-edit me-2 text-success"></i>
+                                                <div>
+                                                    <strong>Complete a descrição da empresa</strong>
+                                                    <small class="text-muted d-block">Ajuda os compradores a conhecê-lo melhor</small>
+                                                </div>
+                                            </li>
+                                        {% endif %}
+                                        
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <i class="fas fa-camera me-2 text-primary"></i>
+                                            <div>
+                                                <strong>Adicione fotos de qualidade aos carros</strong>
+                                                <small class="text-muted d-block">Carros com boas fotos vendem mais rápido</small>
+                                            </div>
+                                        </li>
+                                        
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <i class="fas fa-clock me-2 text-warning"></i>
+                                            <div>
+                                                <strong>Responda rapidamente às mensagens</strong>
+                                                <small class="text-muted d-block">Compradores valorizam respostas rápidas</small>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                {% endif %}
+                                
+                                {% if user.can_buy %}
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <i class="fas fa-heart me-2 text-danger"></i>
+                                            <div>
+                                                <strong>Use a lista de favoritos</strong>
+                                                <small class="text-muted d-block">Guarde carros interessantes para comparar</small>
+                                            </div>
+                                        </li>
+                                        
+                                        <li class="list-group-item d-flex align-items-center">
+                                            <i class="fas fa-bell me-2 text-info"></i>
+                                            <div>
+                                                <strong>Ative os alertas de preço</strong>
+                                                <small class="text-muted d-block">Seja notificado quando os preços baixarem</small>
+                                            </div>
+                                        </li>
+                                    </ul>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Função para calcular percentagens (fallback se o template filter não funcionar)
+function calculatePercentage(part, total) {
+    if (total === 0) return 0;
+    return Math.round((part / total) * 100);
+}
+
+// Animação das barras de progresso
+document.addEventListener('DOMContentLoaded', function() {
+    const progressBars = document.querySelectorAll('.progress-bar');
+    
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        
+        setTimeout(() => {
+            bar.style.transition = 'width 1s ease-in-out';
+            bar.style.width = width;
+        }, 500);
+    });
+});
+</script>
+{% endblock %}
