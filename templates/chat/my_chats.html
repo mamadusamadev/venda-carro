@@ -79,21 +79,22 @@
                                     
                                     <div class="btn-group btn-group-sm">
                                         {% if chat.status == 'closed' %}
-                                        <button class="btn btn-success btn-sm" 
-                                                onclick="event.stopPropagation(); reopenChat('{{ chat.car.id }}')">
-                                            <i class="fas fa-redo"></i> Reabrir
+                                        <!-- Chat encerrado: apenas permite ver detalhes do carro -->
+                                        <button class="btn btn-outline-secondary btn-sm" 
+                                                onclick="event.stopPropagation(); viewCar('{{ chat.car.id }}')">
+                                            <i class="fas fa-car"></i> Ver Carro
                                         </button>
+                                        <small class="text-muted ms-2">Chat encerrado</small>
                                         {% else %}
+                                        <!-- Chat ativo: permite conversar -->
                                         <button class="btn btn-outline-primary btn-sm" 
                                                 onclick="event.stopPropagation(); openChat('{{ chat.id }}')">
                                             <i class="fas fa-comments"></i>
                                         </button>
-                                        {% endif %}
                                         <button class="btn btn-outline-secondary btn-sm" 
                                                 onclick="event.stopPropagation(); viewCar('{{ chat.car.id }}')">
                                             <i class="fas fa-car"></i>
                                         </button>
-                                        {% if chat.status == 'active' %}
                                         <button class="btn btn-outline-danger btn-sm" 
                                                 onclick="event.stopPropagation(); closeChat('{{ chat.id }}', '{{ chat.car.title }}')">
                                             <i class="fas fa-times"></i>
@@ -236,10 +237,8 @@ function viewCar(carId) {
     window.open(`/dashboard/carros/${carId}/`, '_blank');
 }
 
-function reopenChat(carId) {
-    // Redirecionar para iniciar chat (que irá reabrir automaticamente)
-    window.location.href = `/chat/iniciar/${carId}/`;
-}
+// Função removida: chats encerrados não podem ser reabertos
+// Para nova conversa, o comprador deve ir aos detalhes do carro e clicar "Falar com Vendedor"
 
 function closeChat(chatId, carTitle) {
     chatToClose = chatId;

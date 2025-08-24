@@ -4,7 +4,7 @@
 {% block page_title %}Chat sobre {{ car.title }}{% endblock %}
 
 {% block content %}
-<div class="row h-100">
+<div class="row h-100 {% if chat_room.status == 'closed' %}chat-closed{% endif %}">
     <div class="col-12">
         <!-- Header do Chat -->
         <div class="card mb-0" style="height: calc(100vh - 200px);">
@@ -17,8 +17,12 @@
                         <div>
                             <h6 class="mb-0">{{ other_user.get_full_name|default:other_user.username }}</h6>
                             <small class="opacity-75">
-                                {% if is_buyer %}Vendedor{% else %}Comprador{% endif %} • 
+                                {% if is_buyer %}Vendedor{% else %}Comprador{% endif %}
+                                {% if chat_room.status == 'active' %} • 
                                 <span id="user-status" class="text-warning">Offline</span>
+                                {% else %} • 
+                                <span class="badge bg-secondary">Chat Encerrado</span>
+                                {% endif %}
                             </small>
                         </div>
                     </div>
@@ -47,70 +51,76 @@
             <!-- Área de Mensagens -->
             <div class="card-body p-0 d-flex flex-column" style="height: calc(100% - 120px);">
                 <div class="flex-grow-1 overflow-auto p-3" id="messages-container">
-                    <!-- Status do Chat -->
-                    {% if chat_room.status == 'closed' %}
-                    <div class="alert alert-warning text-center">
-                        <i class="fas fa-lock me-2"></i>
-                        Este chat foi fechado por {{ chat_room.closed_by.get_full_name|default:chat_room.closed_by.username }} 
-                        em {{ chat_room.closed_at|date:"d/m/Y H:i" }}
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Mensagens Existentes -->
-                    {% for message in messages %}
-                    <div class="message mb-3 {% if message.sender == request.user %}sent{% else %}received{% endif %}" 
-                         data-message-id="{{ message.id }}">
-                        <div class="d-flex {% if message.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
-                            <div class="message-content {% if message.sender == request.user %}bg-primary text-white{% else %}bg-light{% endif %} p-3 rounded-3" 
-                                 style="max-width: 70%;">
-                                
-                                <!-- Anexo se existir -->
-                                {% if message.attachment %}
-                                    <div class="message-attachment mb-2">
-                                        {% if message.is_image %}
-                                            <img src="{{ message.attachment.url }}" alt="{{ message.attachment_name|default:message.attachment.name }}" 
-                                                 class="img-fluid rounded" style="max-width: 300px; max-height: 200px;">
-                                        {% else %}
-                                            <div class="d-flex align-items-center p-2 rounded bg-white bg-opacity-10">
-                                                <i class="{{ message.get_file_icon }} me-2"></i>
-                                                <div class="flex-grow-1">
-                                                    <div class="fw-bold">{{ message.attachment_name|default:message.attachment.name }}</div>
-                                                    <small class="opacity-75">{{ message.get_file_size_formatted }}</small>
+                        <!-- Status do Chat -->
+                        {% if chat_room.status == 'closed' %}
+                        <div class="alert alert-info text-center mb-3">
+                            <i class="fas fa-lock me-2"></i>
+                            <strong>Chat Encerrado</strong><br>
+                            {% if close_reason == 'inactivity' %}
+                                <small>Fechado automaticamente por inatividade em {{ chat_room.closed_at|date:"d/m/Y H:i" }}</small>
+                            {% else %}
+                                <small>Fechado por {{ chat_room.closed_by.get_full_name|default:chat_room.closed_by.username }} em {{ chat_room.closed_at|date:"d/m/Y H:i" }}</small>
+                            {% endif %}
+                            <br><small class="text-muted">Esta conversa é apenas para visualização</small>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Mensagens Existentes -->
+                        {% for message in messages %}
+                        <div class="message mb-3 {% if message.sender == request.user %}sent{% else %}received{% endif %}" 
+                             data-message-id="{{ message.id }}">
+                            <div class="d-flex {% if message.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+                                <div class="message-content {% if message.sender == request.user %}bg-primary text-white{% else %}bg-light{% endif %} p-3 rounded-3" 
+                                     style="max-width: 70%;">
+                                    
+                                    <!-- Anexo se existir -->
+                                    {% if message.attachment %}
+                                        <div class="message-attachment mb-2">
+                                            {% if message.is_image %}
+                                                <img src="{{ message.attachment.url }}" alt="{{ message.attachment_name|default:message.attachment.name }}" 
+                                                     class="img-fluid rounded" style="max-width: 300px; max-height: 200px;">
+                                            {% else %}
+                                                <div class="d-flex align-items-center p-2 rounded bg-white bg-opacity-10">
+                                                    <i class="{{ message.get_file_icon }} me-2"></i>
+                                                    <div class="flex-grow-1">
+                                                        <div class="fw-bold">{{ message.attachment_name|default:message.attachment.name }}</div>
+                                                        <small class="opacity-75">{{ message.get_file_size_formatted }}</small>
+                                                    </div>
+                                                    <a href="{{ message.attachment.url }}" download="{{ message.attachment_name|default:message.attachment.name }}" 
+                                                       class="btn btn-sm btn-outline-{% if message.sender == request.user %}light{% else %}primary{% endif %}">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
                                                 </div>
-                                                <a href="{{ message.attachment.url }}" download="{{ message.attachment_name|default:message.attachment.name }}" 
-                                                   class="btn btn-sm btn-outline-{% if message.sender == request.user %}light{% else %}primary{% endif %}">
-                                                    <i class="fas fa-download"></i>
-                                                </a>
-                                            </div>
-                                        {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    <!-- Texto se existir -->
+                                    {% if message.content %}
+                                        <div class="message-text">{{ message.content }}</div>
+                                    {% endif %}
+                                    
+                                    <div class="message-time mt-1">
+                                        <small class="{% if message.sender == request.user %}text-white-50{% else %}text-muted{% endif %}">
+                                            {{ message.created_at|date:"H:i" }}
+                                            {% if message.is_edited %}
+                                                <i class="fas fa-edit ms-1" title="Editada"></i>
+                                            {% endif %}
+                                        </small>
                                     </div>
-                                {% endif %}
-                                
-                                <!-- Texto se existir -->
-                                {% if message.content %}
-                                    <div class="message-text">{{ message.content }}</div>
-                                {% endif %}
-                                
-                                <div class="message-time mt-1">
-                                    <small class="{% if message.sender == request.user %}text-white-50{% else %}text-muted{% endif %}">
-                                        {{ message.created_at|date:"H:i" }}
-                                        {% if message.is_edited %}
-                                            <i class="fas fa-edit ms-1" title="Editada"></i>
-                                        {% endif %}
-                                    </small>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    {% empty %}
-                    <div class="text-center text-muted py-5" id="no-messages">
-                        <i class="fas fa-comments fs-1 mb-3"></i>
-                        <p>Ainda não há mensagens neste chat.</p>
-                        <p>Seja o primeiro a enviar uma mensagem!</p>
-                    </div>
-                    {% endfor %}
+                        {% empty %}
+                        <div class="text-center text-muted py-5" id="no-messages">
+                            <i class="fas fa-comments fs-1 mb-3"></i>
+                            <p>Ainda não há mensagens neste chat.</p>
+                            <p>Seja o primeiro a enviar uma mensagem!</p>
+                        </div>
+                        {% endfor %}
                     
-                    <!-- Indicador de Digitação -->
+                    <!-- Indicador de Digitação (apenas para chats ativos) -->
+                    {% if chat_room.status == 'active' %}
                     <div id="typing-indicator" class="message mb-3 received" style="display: none;">
                         <div class="d-flex justify-content-start">
                             <div class="bg-light p-3 rounded-3">
@@ -123,6 +133,7 @@
                             </div>
                         </div>
                     </div>
+                    {% endif %}
                 </div>
                 
                 <!-- Área de Input -->
@@ -215,6 +226,88 @@
     scroll-behavior: smooth;
 }
 
+/* Força a visualização das mensagens */
+.message {
+    display: block !important;
+    margin-bottom: 1rem !important;
+}
+
+.message .d-flex {
+    display: flex !important;
+}
+
+.message-content {
+    display: block !important;
+    padding: 1rem !important;
+    border-radius: 0.5rem !important;
+    max-width: 70% !important;
+    background-color: #f8f9fa !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+/* Estilos específicos para mensagens enviadas */
+.message.sent .message-content,
+.message.sent .bg-primary,
+.message.sent .bg-light {
+    background-color: #007bff !important;
+    color: white !important;
+    border: 1px solid #007bff !important;
+}
+
+/* Estilos específicos para mensagens recebidas */
+.message.received .message-content,
+.message.received .bg-light,
+.message.received .bg-primary {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+/* Sobrescrever todas as classes Bootstrap */
+.chat-closed .message .bg-light,
+.chat-closed .message .bg-primary,
+.message .bg-light,
+.message .bg-primary {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border: 2px solid #dee2e6 !important;
+    padding: 1rem !important;
+    border-radius: 0.75rem !important;
+    min-height: 50px !important;
+    display: block !important;
+}
+
+.chat-closed .message.sent .bg-light,
+.chat-closed .message.sent .bg-primary,
+.message.sent .bg-light,
+.message.sent .bg-primary {
+    background-color: #6c757d !important;
+    color: white !important;
+    border: 2px solid #6c757d !important;
+}
+
+/* Classes Bootstrap específicas */
+.message .p-3 {
+    padding: 1rem !important;
+}
+
+.message .rounded-3 {
+    border-radius: 0.75rem !important;
+}
+
+.message-text {
+    display: block !important;
+    word-wrap: break-word !important;
+    min-height: 20px !important;
+    line-height: 1.4 !important;
+    font-size: 14px !important;
+}
+
+.message-time {
+    display: block !important;
+    margin-top: 0.25rem !important;
+}
+
 .typing-animation {
     display: inline-flex;
     gap: 3px;
@@ -263,6 +356,72 @@
 .status-offline {
     color: #6c757d !important;
 }
+
+/* Estilo para chat fechado */
+.chat-closed #messages-container {
+    /* Manter opacidade total para mensagens serem visíveis */
+    opacity: 1 !important;
+}
+
+.chat-closed .message-content {
+    /* Manter opacidade total e adicionar borda sutil */
+    opacity: 1 !important;
+    border: 1px solid #dee2e6;
+    background-color: #f8f9fa !important;
+    display: block !important;
+    visibility: visible !important;
+}
+
+.chat-closed .message.sent .message-content {
+    background-color: #6c757d !important;
+    color: white !important;
+}
+
+.chat-closed .message.received .message-content {
+    background-color: #f8f9fa !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6;
+}
+
+/* Garantir que texto das mensagens seja visível */
+.chat-closed .message-text {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: inherit !important;
+}
+
+.chat-closed .message-time {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Esconder indicador de digitação em chats fechados */
+.chat-closed #typing-indicator,
+.chat-closed #typing-status {
+    display: none !important;
+}
+
+/* Força esconder indicadores de digitação por padrão */
+#typing-indicator,
+#typing-status {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Só mostrar quando explicitamente ativado */
+#typing-indicator.show-typing,
+#typing-status.show-typing {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    height: auto !important;
+    overflow: visible !important;
+}
 </style>
 {% endblock %}
 
@@ -282,6 +441,12 @@ let notificationSound = null;
 
 // Conectar ao WebSocket
 function connectWebSocket() {
+    // Não conectar se o chat foi marcado como fechado
+    if (window.chatClosed) {
+        console.log('Não conectando WebSocket - chat está fechado');
+        return;
+    }
+    
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/chat/${chatRoomId}/`;
     
@@ -311,8 +476,17 @@ function connectWebSocket() {
         console.log('Chat desconectado');
         updateConnectionStatus(false);
         
-        // Tentar reconectar após 3 segundos
-        setTimeout(connectWebSocket, 3000);
+        // Apenas reconectar se o chat estiver ativo e não foi marcado como fechado
+        {% if chat_room.status == 'active' %}
+        if (!window.chatClosed) {
+            // Tentar reconectar após 3 segundos
+            setTimeout(connectWebSocket, 3000);
+        } else {
+            console.log('Chat fechado - não tentando reconectar');
+        }
+        {% else %}
+        console.log('Chat fechado - não tentando reconectar');
+        {% endif %}
     };
     
     chatSocket.onerror = function(e) {
@@ -335,10 +509,14 @@ function handleWebSocketMessage(data) {
             updateUserStatus(data.user_id, data.status);
             break;
         case 'typing':
+            console.log('Recebido sinal de digitação:', data.user_id, 'is_typing:', data.is_typing);
             showTypingIndicator(data.is_typing);
             break;
         case 'messages_read':
             markMessagesAsRead();
+            break;
+        case 'chat_closed':
+            handleChatClosed(data);
             break;
         case 'error':
             console.error('Erro do WebSocket:', data.message);
@@ -348,10 +526,12 @@ function handleWebSocketMessage(data) {
 
 // Adicionar nova mensagem à conversa
 function addMessage(data) {
+    console.log('addMessage chamada com:', data);
     const messagesContainer = document.getElementById('messages-container');
     const noMessages = document.getElementById('no-messages');
     
     if (noMessages) {
+        console.log('Removendo indicador "no-messages"');
         noMessages.remove();
     }
     
@@ -481,48 +661,93 @@ function sendMessage() {
 
 // Indicar que está a digitar
 function startTyping() {
+    // Não processar digitação se chat estiver fechado
+    if (window.chatClosed) {
+        return;
+    }
+    
+    // Limpar timer anterior
+    clearTimeout(typingTimer);
+    
+    // Enviar sinal de digitação apenas se não estiver já digitando
     if (!isTyping && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
         isTyping = true;
         chatSocket.send(JSON.stringify({
             'action': 'typing',
             'is_typing': true
         }));
+        console.log('Sinal de digitação enviado: true');
     }
     
-    clearTimeout(typingTimer);
-    typingTimer = setTimeout(stopTyping, 3000);
+    // Sempre configurar timer para parar digitação após 3 segundos
+    typingTimer = setTimeout(() => {
+        console.log('Timer de digitação expirou - chamando stopTyping');
+        stopTyping();
+    }, 3000);
 }
 
 function stopTyping() {
-    if (isTyping && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-        isTyping = false;
+    console.log('stopTyping chamada - limpando estado de digitação');
+    
+    // Sempre limpar o estado local de digitação
+    isTyping = false;
+    clearTimeout(typingTimer);
+    
+    // Sempre enviar sinal de parar digitação se WebSocket estiver conectado
+    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
         chatSocket.send(JSON.stringify({
             'action': 'typing',
             'is_typing': false
         }));
+        console.log('Sinal de digitação enviado: false');
     }
-    clearTimeout(typingTimer);
+    
+    // Garantir que indicadores locais sejam escondidos
+    const typingIndicator = document.getElementById('typing-indicator');
+    const typingStatus = document.getElementById('typing-status');
+    if (typingIndicator) {
+        typingIndicator.classList.remove('show-typing');
+        typingIndicator.style.display = 'none';
+        typingIndicator.style.visibility = 'hidden';
+        console.log('Indicador de digitação escondido');
+    }
+    if (typingStatus) {
+        typingStatus.classList.remove('show-typing');
+        typingStatus.style.display = 'none';
+        typingStatus.style.visibility = 'hidden';
+        console.log('Status de digitação escondido');
+    }
 }
 
 // Mostrar indicador de digitação
 function showTypingIndicator(isTypingNow) {
+    console.log('showTypingIndicator chamada:', isTypingNow);
+    
+    // Não mostrar indicador se chat estiver fechado
+    if (window.chatClosed) {
+        console.log('Chat fechado - ignorando indicador de digitação');
+        return;
+    }
+    
     const typingIndicator = document.getElementById('typing-indicator');
     const typingStatus = document.getElementById('typing-status');
     
     if (isTypingNow) {
+        console.log('Mostrando indicador de digitação');
         if (typingIndicator) {
-            typingIndicator.style.display = 'block';
+            typingIndicator.classList.add('show-typing');
             scrollToBottom();
         }
         if (typingStatus) {
-            typingStatus.style.display = 'block';
+            typingStatus.classList.add('show-typing');
         }
     } else {
+        console.log('Escondendo indicador de digitação');
         if (typingIndicator) {
-            typingIndicator.style.display = 'none';
+            typingIndicator.classList.remove('show-typing');
         }
         if (typingStatus) {
-            typingStatus.style.display = 'none';
+            typingStatus.classList.remove('show-typing');
         }
     }
 }
@@ -736,15 +961,61 @@ function confirmCloseChat() {
 
 // Manipular chat fechado
 function handleChatClosed(data) {
+    console.log('handleChatClosed chamada com:', data);
+    
+    // Não processar se chat já está fechado desde o carregamento inicial
+    if (window.chatClosed) {
+        console.log('Chat já está fechado, ignorando handleChatClosed');
+        return;
+    }
+    
     const inputArea = document.querySelector('.border-top.p-3');
+    const messagesContainer = document.getElementById('messages-container');
+    
+    let message = 'Chat foi fechado';
+    
+    if (data.reason === 'inactivity') {
+        message = 'Chat encerrado automaticamente por inatividade (5 minutos sem resposta)';
+        
+        // Adicionar mensagem de sistema
+        if (messagesContainer) {
+            const systemMessageDiv = document.createElement('div');
+            systemMessageDiv.className = 'alert alert-warning text-center mb-3';
+            systemMessageDiv.innerHTML = `
+                <i class="fas fa-clock me-2"></i>
+                ${data.message}
+            `;
+            messagesContainer.appendChild(systemMessageDiv);
+            scrollToBottom();
+        }
+    } else if (data.closed_by_username) {
+        message = `Chat fechado por ${data.closed_by_username}`;
+    }
+    
     if (inputArea) {
         inputArea.innerHTML = `
             <div class="text-center text-muted">
                 <i class="fas fa-lock me-2"></i>
-                Chat fechado por ${data.closed_by_username}
+                ${message}
             </div>
         `;
     }
+    
+    // Desabilitar funcionalidades do chat
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const fileButton = document.getElementById('file-button');
+    
+    if (messageInput) messageInput.disabled = true;
+    if (sendButton) sendButton.disabled = true;
+    if (fileButton) fileButton.disabled = true;
+    
+    // Fechar WebSocket após 3 segundos
+    setTimeout(() => {
+        if (chatSocket) {
+            chatSocket.close();
+        }
+    }, 3000);
 }
 
 // Ver detalhes do carro
@@ -766,8 +1037,55 @@ function escapeHtml(text) {
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Chat carregado - Status:', '{{ chat_room.status }}');
+    
+    // Verificar se mensagens estão carregadas corretamente
+    const messagesContainer = document.getElementById('messages-container');
+    const existingMessages = messagesContainer.querySelectorAll('.message');
+    console.log('Mensagens carregadas:', existingMessages.length);
+    
+    // Verificar mensagens carregadas
+    if (existingMessages.length > 0) {
+        console.log('Mensagens carregadas e estilizadas com sucesso');
+    }
+    
+    // Apenas conectar WebSocket se chat estiver ativo
+    {% if chat_room.status == 'active' %}
+    console.log('Conectando WebSocket para chat ativo...');
     connectWebSocket();
+    {% else %}
+    console.log('Chat está fechado - WebSocket não será conectado');
+    // Para chats fechados, garantir que não há reconexão
+    window.chatClosed = true;
+    
+    // Esconder qualquer indicador de digitação que possa estar visível
+    const typingIndicator = document.getElementById('typing-indicator');
+    const typingStatus = document.getElementById('typing-status');
+    if (typingIndicator) typingIndicator.style.display = 'none';
+    if (typingStatus) typingStatus.style.display = 'none';
+    {% endif %}
     initializeNotificationSound();
+    
+    // Limpar qualquer indicador de digitação que possa estar ativo
+    setTimeout(() => {
+        // Força esconder TODOS os indicadores de digitação
+        const allTypingIndicators = document.querySelectorAll('[id*="typing"]');
+        allTypingIndicators.forEach(el => {
+            el.classList.remove('show-typing');
+            el.style.display = 'none !important';
+            el.style.visibility = 'hidden !important';
+            el.style.opacity = '0 !important';
+            el.style.height = '0 !important';
+            console.log('Forçadamente escondido:', el.id);
+        });
+        
+        // Resetar estado local
+        isTyping = false;
+        clearTimeout(typingTimer);
+        
+        // NÃO chamar stopTyping aqui para evitar enviar sinais desnecessários
+        console.log('Estado de digitação resetado no carregamento');
+    }, 1000); // Aumentar para 1 segundo
     
     const messageInput = document.getElementById('message-input');
     const sendButton = document.getElementById('send-button');
@@ -787,11 +1105,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Indicar digitação
         messageInput.addEventListener('input', startTyping);
         
+        // Parar digitação quando campo perde foco
+        messageInput.addEventListener('blur', () => {
+            console.log('Campo de input perdeu foco - parando digitação');
+            stopTyping();
+        });
+        
         // Enviar mensagem ao clicar no botão
         sendButton.addEventListener('click', sendMessage);
     }
     
-    // Botão de arquivo
+    // Botão de arquivo (apenas para chats ativos)
     if (fileButton && fileInput) {
         fileButton.addEventListener('click', function() {
             console.log('Botão de arquivo clicado');
@@ -800,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         fileInput.addEventListener('change', handleFileSelection);
         console.log('Event listeners de arquivo configurados');
-    } else {
+    } else if ('{{ chat_room.status }}' === 'active') {
         console.error('fileButton ou fileInput não encontrados!');
         console.log('fileButton:', fileButton);
         console.log('fileInput:', fileInput);
@@ -813,7 +1137,56 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Rolar para o final ao carregar
     scrollToBottom();
+    
+    // Desabilitar controles se chat estiver fechado
+    {% if chat_room.status == 'closed' %}
+    disableChatControls();
+    {% endif %}
+    
+    // Workaround: Limpar indicadores travados a cada 10 segundos
+    setInterval(() => {
+        if (!isTyping) {  // Só limpar se realmente não estiver digitando
+            const typingIndicator = document.getElementById('typing-indicator');
+            const typingStatus = document.getElementById('typing-status');
+            if (typingIndicator && typingIndicator.style.display === 'block') {
+                console.log('Limpeza forçada - indicador travado detectado');
+                typingIndicator.style.display = 'none';
+            }
+            if (typingStatus && typingStatus.style.display === 'block') {
+                console.log('Limpeza forçada - status travado detectado');
+                typingStatus.style.display = 'none';
+            }
+        }
+    }, 10000); // A cada 10 segundos
+    
+
 });
+
+// Função para desabilitar controles do chat fechado
+function disableChatControls() {
+    const messageInput = document.getElementById('message-input');
+    const sendButton = document.getElementById('send-button');
+    const fileButton = document.getElementById('file-button');
+    const fileInput = document.getElementById('file-input');
+    
+    if (messageInput) {
+        messageInput.disabled = true;
+        messageInput.placeholder = 'Chat encerrado - apenas visualização';
+    }
+    if (sendButton) {
+        sendButton.disabled = true;
+        sendButton.classList.add('btn-secondary');
+        sendButton.classList.remove('btn-primary');
+    }
+    if (fileButton) {
+        fileButton.disabled = true;
+        fileButton.classList.add('btn-secondary');
+        fileButton.classList.remove('btn-outline-secondary');
+    }
+    if (fileInput) {
+        fileInput.disabled = true;
+    }
+}
 
 // Fechar conexão ao sair da página
 window.addEventListener('beforeunload', function() {

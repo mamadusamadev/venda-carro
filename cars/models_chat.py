@@ -37,6 +37,10 @@ class ChatRoom(models.Model):
         verbose_name='Fechado por'
     )
     
+    # Controle de inatividade
+    buyer_last_activity = models.DateTimeField(null=True, blank=True, verbose_name='Última atividade do comprador')
+    auto_closed = models.BooleanField(default=False, verbose_name='Fechado automaticamente por inatividade')
+    
     # Controle de leitura
     buyer_last_read = models.DateTimeField(null=True, blank=True, verbose_name='Última leitura do comprador')
     seller_last_read = models.DateTimeField(null=True, blank=True, verbose_name='Última leitura do vendedor')
@@ -44,13 +48,22 @@ class ChatRoom(models.Model):
     class Meta:
         verbose_name = 'Sala de Chat'
         verbose_name_plural = 'Salas de Chat'
-        unique_together = ['car', 'buyer']  # Um comprador só pode ter um chat por carro
+        # Removido unique_together para permitir múltiplos chats (mas apenas um ativo)
         ordering = ['-last_activity']
         indexes = [
             models.Index(fields=['buyer', 'status']),
             models.Index(fields=['seller', 'status']),
             models.Index(fields=['car', 'status']),
             models.Index(fields=['-last_activity']),
+            models.Index(fields=['car', 'buyer', 'status']),  # Para buscar chat ativo
+        ]
+        constraints = [
+            # Permitir apenas um chat ativo por comprador/carro
+            models.UniqueConstraint(
+                fields=['car', 'buyer'],
+                condition=models.Q(status='active'),
+                name='unique_active_chat_per_buyer_car'
+            )
         ]
 
     def __str__(self):
@@ -84,19 +97,57 @@ class ChatRoom(models.Model):
             self.seller_last_read = now
         self.save(update_fields=['buyer_last_read', 'seller_last_read'])
 
-    def close_chat(self, user):
+    def close_chat(self, user, auto_closed=False):
         """Fechar o chat"""
         self.status = 'closed'
         self.closed_at = timezone.now()
         self.closed_by = user
-        self.save(update_fields=['status', 'closed_at', 'closed_by'])
+        self.auto_closed = auto_closed
+        self.save(update_fields=['status', 'closed_at', 'closed_by', 'auto_closed'])
 
-    def reopen_chat(self):
-        """Reabrir o chat"""
-        self.status = 'active'
-        self.closed_at = None
-        self.closed_by = None
-        self.save(update_fields=['status', 'closed_at', 'closed_by'])
+    def can_reopen(self):
+        """Verificar se o chat pode ser reaberto (não pode ser reaberto uma vez fechado)"""
+        return False
+
+    def auto_close_for_inactivity(self):
+        """Fechar chat automaticamente por inatividade"""
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        # Criar usuário sistema para fechamento automático
+        system_user, created = User.objects.get_or_create(
+            username='system_autoclose',
+            defaults={
+                'email': 'system@carzone.com',
+                'first_name': 'Sistema',
+                'last_name': 'Auto-encerramento',
+                'is_active': False
+            }
+        )
+        
+        self.close_chat(system_user, auto_closed=True)
+        
+        # Criar mensagem de sistema informando o fechamento
+        ChatMessage.objects.create(
+            chat_room=self,
+            sender=system_user,
+            content="Chat encerrado automaticamente por inatividade (5 minutos sem resposta).",
+            message_type='system'
+        )
+
+    def update_buyer_activity(self):
+        """Atualizar última atividade do comprador"""
+        self.buyer_last_activity = timezone.now()
+        self.save(update_fields=['buyer_last_activity'])
+
+    def is_buyer_inactive(self):
+        """Verificar se comprador está inativo há mais de 5 minutos"""
+        if not self.buyer_last_activity:
+            return False
+        
+        from datetime import timedelta
+        time_threshold = timezone.now() - timedelta(minutes=5)
+        return self.buyer_last_activity < time_threshold
 
     def get_other_user(self, current_user):
         """Obter o outro utilizador do chat"""

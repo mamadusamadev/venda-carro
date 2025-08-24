@@ -1,7 +1,9 @@
 import json
+import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 from cars.models import ChatRoom, ChatMessage, ChatNotification
 
 User = get_user_model()
@@ -10,6 +12,8 @@ User = get_user_model()
 class ChatConsumer(AsyncWebsocketConsumer):
     # Dicionário para rastrear utilizadores online por sala
     online_users = {}
+    # Dicionário para rastrear tarefas de verificação de inatividade
+    inactivity_tasks = {}
     
     async def connect(self):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
@@ -50,9 +54,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'status': 'online'
             }
         )
+        
+        # Iniciar monitoramento de inatividade se for comprador
+        chat_room = await self.get_chat_room()
+        if chat_room:
+            is_buyer = await self.is_user_buyer(chat_room)
+            if is_buyer:
+                await self.start_inactivity_monitor()
 
     async def disconnect(self, close_code):
         if hasattr(self, 'room_group_name'):
+            # Cancelar tarefa de inatividade se existir
+            task_key = f"{self.room_group_name}_{self.user.id}"
+            if task_key in self.inactivity_tasks:
+                self.inactivity_tasks[task_key].cancel()
+                del self.inactivity_tasks[task_key]
+            
             # Remover utilizador da lista de online para esta sala
             if self.room_group_name in self.online_users:
                 self.online_users[self.room_group_name].discard(str(self.user.id))
@@ -136,6 +153,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message = await self.create_message(chat_room, message_content, message_type, file_data, file_name)
         
         if message:
+            # Atualizar atividade do comprador se for ele que está enviando
+            is_buyer = await self.is_user_buyer(chat_room)
+            if is_buyer:
+                await self.update_buyer_activity_db(chat_room)
+                # Reiniciar monitoramento de inatividade
+                await self.restart_inactivity_monitor()
             # Criar notificação para o outro utilizador
             await self.create_notification(chat_room, message)
             
@@ -280,15 +303,12 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_other_user(self, chat_room):
         """Obter o outro utilizador da conversa (não o atual)"""
-        if chat_room.buyer != self.user:
-            return chat_room.buyer
-        elif chat_room.seller != self.user:
-            return chat_room.seller
-        return None
+        return chat_room.get_other_user(self.user)
 
     @database_sync_to_async
     def user_has_permission(self, chat_room):
-        return self.user == chat_room.buyer or self.user == chat_room.seller
+        """Verificar se o usuário tem permissão para acessar o chat"""
+        return (self.user == chat_room.buyer or self.user == chat_room.seller)
 
     @database_sync_to_async
     def create_message(self, chat_room, content, message_type, file_data=None, file_name=None):
@@ -321,6 +341,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     message.message_type = 'file'
             
             message.save()
+            
             return message
         except Exception as e:
             print(f"Erro ao criar mensagem: {e}")
@@ -360,3 +381,81 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def is_image(self, message):
         return message.is_image()
+    
+    async def start_inactivity_monitor(self):
+        """Iniciar monitoramento de inatividade para comprador"""
+        task_key = f"{self.room_group_name}_{self.user.id}"
+        
+        # Cancelar tarefa anterior se existir
+        if task_key in self.inactivity_tasks:
+            self.inactivity_tasks[task_key].cancel()
+        
+        # Criar nova tarefa
+        self.inactivity_tasks[task_key] = asyncio.create_task(
+            self.check_inactivity_loop()
+        )
+    
+    async def restart_inactivity_monitor(self):
+        """Reiniciar monitoramento de inatividade"""
+        await self.start_inactivity_monitor()
+    
+    async def check_inactivity_loop(self):
+        """Loop para verificar inatividade a cada minuto"""
+        try:
+            while True:
+                await asyncio.sleep(60)  # Verificar a cada minuto
+                
+                chat_room = await self.get_chat_room()
+                if not chat_room or chat_room.status != 'active':
+                    break
+                
+                # Verificar se comprador está inativo
+                if await self.is_buyer_inactive_db(chat_room):
+                    print(f"Comprador {self.user.username} inativo há mais de 5 minutos, fechando chat")
+                    
+                    # Fechar chat automaticamente
+                    await self.auto_close_chat(chat_room)
+                    
+                    # Notificar ambos os usuários
+                    await self.channel_layer.group_send(
+                        self.room_group_name,
+                        {
+                            'type': 'chat_auto_closed',
+                            'reason': 'inactivity'
+                        }
+                    )
+                    break
+                    
+        except asyncio.CancelledError:
+            # Tarefa cancelada, normal
+            pass
+        except Exception as e:
+            print(f"Erro no monitoramento de inatividade: {e}")
+    
+    @database_sync_to_async
+    def is_buyer_inactive_db(self, chat_room):
+        """Verificar se comprador está inativo (versão async)"""
+        return chat_room.is_buyer_inactive()
+    
+    @database_sync_to_async
+    def auto_close_chat(self, chat_room):
+        """Fechar chat automaticamente (versão async)"""
+        chat_room.auto_close_for_inactivity()
+    
+    @database_sync_to_async
+    def update_buyer_activity_db(self, chat_room):
+        """Atualizar atividade do comprador (versão async)"""
+        chat_room.update_buyer_activity()
+    
+    @database_sync_to_async
+    def is_user_buyer(self, chat_room):
+        """Verificar se o usuário atual é o comprador (versão async)"""
+        return self.user == chat_room.buyer
+    
+    async def chat_auto_closed(self, event):
+        """Handler para notificação de chat fechado automaticamente"""
+        await self.send(text_data=json.dumps({
+            'type': 'chat_closed',
+            'reason': event['reason'],
+            'message': 'Chat encerrado automaticamente por inatividade (5 minutos sem resposta)'
+        }))

@@ -356,7 +356,8 @@
             </div>
             
             <div class="d-flex align-items-center">
-                <!-- Mensagens de Chat -->
+                <!-- Mensagens de Chat (não mostrar na página de chat) -->
+                {% if 'chat/sala' not in request.path %}
                 <div class="dropdown me-3">
                     <button class="btn btn-link position-relative" type="button" data-bs-toggle="dropdown" title="Mensagens">
                         <i class="fas fa-comments fs-5 notification-icon"></i>
@@ -377,6 +378,7 @@
                         </a></li>
                     </ul>
                 </div>
+                {% endif %}
 
                 <!-- Notificações na Navbar -->
                 <a href="{% url 'dashboard:notifications' %}" class="btn btn-link position-relative me-3" title="Notificações">
@@ -491,6 +493,11 @@
 
         // Carregar mensagens recentes de chat
         function loadRecentMessages() {
+            // Não executar na página de chat
+            if (window.location.pathname.includes('/chat/sala/')) {
+                return;
+            }
+            
             fetch('/chat/api/recent-messages/')
                 .then(response => response.json())
                 .then(data => {
@@ -580,13 +587,18 @@
 
         // Verificar notificações e mensagens a cada 30 segundos
         document.addEventListener('DOMContentLoaded', function() {
-            setInterval(() => {
-                checkForNewNotifications();
-                loadRecentMessages();
-            }, 30000);
+            // Não executar na página de chat para evitar conflitos
+            const isCharRoom = window.location.pathname.includes('/chat/sala/');
             
-            // Carregar imediatamente
-            loadRecentMessages();
+            if (!isCharRoom) {
+                setInterval(() => {
+                    checkForNewNotifications();
+                    loadRecentMessages();
+                }, 30000);
+                
+                // Carregar imediatamente
+                loadRecentMessages();
+            }
         });
         
 

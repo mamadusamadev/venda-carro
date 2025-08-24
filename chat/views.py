@@ -22,38 +22,51 @@ def start_chat(request, car_id):
         messages.error(request, 'Não pode iniciar um chat com você mesmo.')
         return redirect('dashboard:car_detail', car_id=car_id)
     
-    # Verificar se já existe uma sala de chat
-    # Verificar se já existe uma sala de chat para este carro e comprador
+    # Verificar se já existe uma sala de chat ativa
     try:
-        chat_room = ChatRoom.objects.get(car=car, buyer=request.user)
+        # Buscar chat ativo para este carro e comprador
+        chat_room = ChatRoom.objects.get(car=car, buyer=request.user, status='active')
         created = False
+        messages.info(request, 'Continuando conversa existente.')
+        # Atualizar atividade do comprador
+        chat_room.update_buyer_activity()
         
-        # Se o chat estava fechado, reabrir
-        if chat_room.status == 'closed':
-            chat_room.reopen_chat()
-            messages.success(request, 'Chat reaberto com sucesso!')
-        else:
-            messages.info(request, 'Continuando conversa existente.')
-            
     except ChatRoom.DoesNotExist:
-        # Criar nova sala de chat
-        chat_room = ChatRoom.objects.create(
-            car=car,
-            buyer=request.user,
-            seller=car.seller,
-            status='active'
-        )
-        created = True
-        
-        # Criar notificação para o vendedor sobre novo chat
-        ChatNotification.objects.create(
-            recipient=car.seller,
-            chat_room=chat_room,
-            notification_type='chat_started',
-            title=f'Novo chat sobre {car.title}',
-            content=f'{request.user.get_full_name() or request.user.username} iniciou uma conversa sobre o seu carro.'
-        )
-        messages.success(request, 'Chat iniciado com sucesso!')
+        # Não existe chat ativo - criar novo
+        try:
+            # Verificar se existe chat fechado anterior
+            old_chat = ChatRoom.objects.filter(car=car, buyer=request.user, status='closed').first()
+            if old_chat:
+                messages.info(request, 'Chat anterior foi encerrado. Criando nova conversa.')
+            
+            # Criar nova sala de chat
+            chat_room = ChatRoom.objects.create(
+                car=car,
+                buyer=request.user,
+                seller=car.seller,
+                status='active'
+            )
+            # Inicializar atividade do comprador
+            chat_room.update_buyer_activity()
+            created = True
+            
+            # Criar notificação para o vendedor sobre novo chat
+            ChatNotification.objects.create(
+                recipient=car.seller,
+                chat_room=chat_room,
+                notification_type='chat_started',
+                title=f'Novo chat sobre {car.title}',
+                content=f'{request.user.get_full_name() or request.user.username} iniciou uma conversa sobre o seu carro.'
+            )
+            messages.success(request, 'Chat iniciado com sucesso!')
+            
+        except Exception as e:
+            messages.error(request, 'Erro ao iniciar chat. Tente novamente em alguns instantes.')
+            return redirect('dashboard:car_detail', car_id=car_id)
+    
+    except Exception as e:
+        messages.error(request, 'Erro ao acessar chat. Tente novamente.')
+        return redirect('dashboard:car_detail', car_id=car_id)
     
     return redirect('chat:chat_room', room_id=chat_room.id)
 
@@ -63,34 +76,49 @@ def chat_room(request, room_id):
     """
     Página da sala de chat
     """
-    chat_room = get_object_or_404(ChatRoom, id=room_id)
-    
-    # Verificar se o utilizador tem acesso
-    if request.user != chat_room.buyer and request.user != chat_room.seller:
-        messages.error(request, 'Não tem permissão para aceder a este chat.')
-        return redirect('dashboard:home')
-    
-    # Obter mensagens da conversa
-    messages_list = chat_room.messages.filter(is_deleted=False).select_related('sender')
-    
-    # Marcar mensagens como lidas
-    chat_room.mark_as_read(request.user)
-    
-    # Obter informações do outro utilizador
-    other_user = chat_room.get_other_user(request.user)
-    
-    # Determinar se o utilizador atual é o comprador
-    is_buyer = request.user == chat_room.buyer
-    
-    context = {
-        'chat_room': chat_room,
-        'messages': messages_list,
-        'other_user': other_user,
-        'is_buyer': is_buyer,
-        'car': chat_room.car,
-    }
-    
-    return render(request, 'chat/chat_room.html', context)
+    try:
+        chat_room = get_object_or_404(ChatRoom, id=room_id)
+        
+        # Verificar se o utilizador tem acesso
+        if request.user != chat_room.buyer and request.user != chat_room.seller:
+            messages.error(request, 'Não tem permissão para aceder a este chat.')
+            return redirect('dashboard:home')
+        
+        # Obter mensagens da conversa
+        messages_list = chat_room.messages.filter(is_deleted=False).select_related('sender').order_by('created_at')
+        
+        # Marcar mensagens como lidas apenas se chat estiver ativo
+        if chat_room.status == 'active':
+            chat_room.mark_as_read(request.user)
+        
+        # Obter informações do outro utilizador
+        other_user = chat_room.get_other_user(request.user)
+        
+        # Determinar se o utilizador atual é o comprador
+        is_buyer = request.user == chat_room.buyer
+        
+        # Informação sobre o motivo do fechamento se aplicável
+        close_reason = None
+        if chat_room.status == 'closed':
+            if chat_room.auto_closed:
+                close_reason = 'inactivity'
+            else:
+                close_reason = 'manual'
+        
+        context = {
+            'chat_room': chat_room,
+            'messages': messages_list,
+            'other_user': other_user,
+            'is_buyer': is_buyer,
+            'car': chat_room.car,
+            'close_reason': close_reason,
+        }
+        
+        return render(request, 'chat/chat_room.html', context)
+        
+    except Exception as e:
+        messages.error(request, 'Erro ao aceder ao chat. Tente novamente.')
+        return redirect('chat:my_chats')
 
 
 @login_required
@@ -132,31 +160,44 @@ def close_chat(request, room_id):
     Fechar um chat
     """
     if request.method == 'POST':
-        chat_room = get_object_or_404(ChatRoom, id=room_id)
+        try:
+            chat_room = get_object_or_404(ChatRoom, id=room_id)
+            
+            # Verificar se o utilizador tem acesso
+            if request.user != chat_room.buyer and request.user != chat_room.seller:
+                return JsonResponse({'success': False, 'error': 'Sem permissão'})
+            
+            # Fechar o chat
+            chat_room.close_chat(request.user)
+            
+            # Criar notificação para o outro utilizador
+            try:
+                other_user = chat_room.get_other_user(request.user)
+                if other_user:
+                    ChatNotification.objects.create(
+                        recipient=other_user,
+                        chat_room=chat_room,
+                        notification_type='chat_closed',
+                        title=f'Chat sobre {chat_room.car.title} foi fechado',
+                        content=f'{request.user.get_full_name() or request.user.username} fechou o chat.'
+                    )
+            except Exception:
+                # Erro na notificação não deve impedir o fechamento do chat
+                pass
+            
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            else:
+                messages.success(request, 'Chat fechado com sucesso.')
+                return redirect('chat:my_chats')
         
-        # Verificar se o utilizador tem acesso
-        if request.user != chat_room.buyer and request.user != chat_room.seller:
-            return JsonResponse({'success': False, 'error': 'Sem permissão'})
-        
-        # Fechar o chat
-        chat_room.close_chat(request.user)
-        
-        # Criar notificação para o outro utilizador
-        other_user = chat_room.get_other_user(request.user)
-        if other_user:
-            ChatNotification.objects.create(
-                recipient=other_user,
-                chat_room=chat_room,
-                notification_type='chat_closed',
-                title=f'Chat sobre {chat_room.car.title} foi fechado',
-                content=f'{request.user.get_full_name() or request.user.username} fechou o chat.'
-            )
-        
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'success': True})
-        else:
-            messages.success(request, 'Chat fechado com sucesso.')
-            return redirect('chat:my_chats')
+        except Exception as e:
+            error_msg = 'Erro ao fechar chat. Tente novamente.'
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': error_msg})
+            else:
+                messages.error(request, error_msg)
+                return redirect('chat:my_chats')
     
     return JsonResponse({'success': False, 'error': 'Método não permitido'})
 
@@ -271,6 +312,10 @@ def send_message_api(request, room_id):
                 content=message_content,
                 message_type=message_type
             )
+            
+            # Atualizar atividade do comprador se for ele que está enviando
+            if request.user == chat_room.buyer:
+                chat_room.update_buyer_activity()
             
             # Criar notificação para o outro utilizador
             other_user = chat_room.get_other_user(request.user)
